@@ -3,6 +3,8 @@ import re
 
 import aiohttp
 
+from rate_limiter import RateLimiter
+
 SLOP_MODELS = [
     "openai/gpt-oss-20b:free",
     "deepseek/deepseek-chat-v3.1:free",
@@ -25,6 +27,7 @@ class RequestHandler:
         self,
         url: str,
         key: str,
+        rate_limiter: RateLimiter,
         slop_models: list[str] = SLOP_MODELS,
         clean_up_models: list[str] = CLEAN_UP_MODELS,
         slop_temperature: float = SLOP_TEMPERATURE,
@@ -32,6 +35,7 @@ class RequestHandler:
     ):
         self.url: str = url
         self.key: str = key
+        self.rate_limiter: RateLimiter = rate_limiter
 
         self.slop_models: list[str] = slop_models.copy()
         self.clean_up_models: list[str] = clean_up_models.copy()
@@ -42,40 +46,53 @@ class RequestHandler:
         self.session: aiohttp.ClientSession = aiohttp.ClientSession()
 
     async def get_slop_post(self, prompt: str) -> str | None:
+        """Calls LLM API to generate a slop LinkedIn post"""
         model = random.choice(self.slop_models)
         return await self._get_post(model, prompt, self.slop_temperature)
 
     async def get_clean_post(self, prompt: str) -> str | None:
+        """Calls LLM API to generate a cleaned up LinkedIn post"""
         model = random.choice(self.clean_up_models)
         return await self._get_post(model, prompt, self.clean_up_temperature)
 
     async def _get_post(
         self, model: str, prompt: str, temperature: float
     ) -> str | None:
-        """Returns a LinkedIn post"""
-        async with self.session:
-            async with self.session.post(
+        """Calls LLM API to generate a LinkedIn post"""
+        async with (
+            self.session,
+            self.rate_limiter,
+            self.session.post(
                 url=self.url,
-                headers={
-                    "Authorization": f"Bearer {self.key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": model,
-                    "prompt": prompt,
-                    "temperature": temperature,
-                },
-            ) as response:
-                data = await response.json()
-                try:
-                    text: str = data["choices"][0]["text"]
-                except KeyError:
-                    raise RuntimeError(f"Unexpected response from {self.url}:\n{data}")
+                headers=self._get_headers(),
+                json=self._get_json_body(model, prompt, temperature),
+            ) as response,
+        ):
+            data = await response.json()  # pyright:ignore[reportAny]
+            try:
+                text: str = data["choices"][0]["text"]  # pyright:ignore[reportAny]
+            except KeyError:
+                raise RuntimeError(f"Unexpected response from {self.url}:\n{data}")
 
-                return self._parse_response_text(text)
+            return self._parse_response_text(text)
+
+    def _get_headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.key}",
+            "Content-Type": "application/json",
+        }
+
+    def _get_json_body(
+        self, model: str, prompt: str, temperature: float
+    ) -> dict[str, str | float]:
+        return {
+            "model": model,
+            "prompt": prompt,
+            "temperature": temperature,
+        }
 
     def _parse_response_text(self, response: str) -> str | None:
-        """Parses a response for <POST> and </POST> tags"""
+        """Parses a response for content between <POST> and </POST> tags"""
         matches: list[str] = re.findall(r"<POST>(.*?)</POST>", response, re.DOTALL)
         if matches:
             # Return last match in case model is weird and includes original post in response.
