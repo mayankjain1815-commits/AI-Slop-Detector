@@ -123,13 +123,14 @@ class PromptGenerator:
         """
         self.topics: dict[str, list[str]] = deepcopy(topics)
 
-        self.all_features: list[str] = deepcopy(features)
+        self.all_features: list[str] = features.copy()
         self.p_feature: float = p_feature
 
-        self.clean_up_rules: list[str] = deepcopy(clean_up_rules)
+        self.clean_up_rules: list[str] = clean_up_rules.copy()
         self.p_rule: float = p_rule
 
-    def generate_slop(self) -> str:
+    def generate_slop_prompt(self) -> str:
+        """Generates a prompt asking the LLM to write slop"""
         topic = random.choice(list(self.topics.keys()))
         subtopic = random.choice(self.topics[topic])
 
@@ -152,9 +153,8 @@ class PromptGenerator:
 
         return prompt
 
-    def generate_clean_up(self, slop_post: str) -> str:
+    def generate_clean_up_prompt(self, slop_post: str) -> str:
         """Generates a prompt asking the LLM to clean up a slop post."""
-
         heading = "Convert this corporate LinkedIn post into plain, honest English.\n\n"
 
         post = f"<POST>{slop_post}</POST>\n\n"
