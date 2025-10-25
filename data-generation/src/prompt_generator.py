@@ -147,7 +147,7 @@ class PromptGenerator:
             features += "Try to include:\n"
             features += f"{''.join(feature_list)}\n"
 
-        closing = "Start by picking a strong thesis statement within this topic, then write the post. Surround the post with <POST> and </POST> tags."
+        closing = "Please surround the post with <POST> and </POST> tags."
 
         prompt = f"{heading}{features}{closing}"
 
@@ -170,7 +170,7 @@ class PromptGenerator:
             rules += "Here are some suggestions to keep in mind:\n"
             rules += f"{''.join(rule_list)}\n"
 
-        closing = "Surround the post with <POST> and </POST> tags."
+        closing = "Please surround the post with <POST> and </POST> tags."
 
         prompt = f"{heading}{post}{rules}{closing}"
 
