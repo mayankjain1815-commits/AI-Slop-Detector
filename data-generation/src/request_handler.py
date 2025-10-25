@@ -74,7 +74,7 @@ class RequestHandler:
                 return result
 
             try:
-                text: str = data["choices"][0]["text"]  # pyright:ignore[reportAny]
+                text: str = data["choices"][0]["message"]["content"]  # pyright:ignore[reportAny]
             except Exception:
                 result = ErrorResponse("Error response from OpenRouter")
                 result.add_context(
@@ -105,7 +105,7 @@ class RequestHandler:
     ) -> dict[str, str | float]:
         return {
             "model": model,
-            "prompt": prompt,
+            "messages": [{"role": "user", "content": prompt}],
             "temperature": temperature,
         }
 
