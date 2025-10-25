@@ -94,7 +94,7 @@ SLOP_FEATURES = [
 CLEAN_UP_RULES = [
     "Remove any 'it's not X, it's Y'-style language",
     "Refrain from using emojis",
-    "Remove any **bold** text, especially after a bullet point"
+    "Remove any **bold** text, especially after a bullet point",
     "Replace buzzwords with specific, concrete language",
     "Convert vague platitudes into actual actionable advice or omit it when there's no real content",
     "Remove false dichotomies and artificial urgency",

@@ -102,7 +102,7 @@ class RequestHandler:
 
     def _get_json_body(
         self, model: str, prompt: str, temperature: float
-    ) -> dict[str, str | float]:
+    ) -> dict[str, str | float | list[dict[str, str]]]:
         return {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
