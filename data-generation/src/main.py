@@ -8,7 +8,7 @@ from file_writer import FileWriter
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 SECONDS_BETWEEN_REQUESTS = 3.0  # OpenRouter rate limit is 20 requests / minute
-N_DATA = 2  # OpenRouter limits to 1000 requests per day => 500 data points per run
+N_DATA = 3  # OpenRouter limits to 1000 requests per day => 500 data points per run
 
 ENV = utils.get_env()
 
@@ -23,16 +23,16 @@ async def run_task(
 
     print(f"[INFO] Task {task_id} making slop request")
     slop_post = await request_handler.get_slop_post(slop_prompt)
-    if slop_post is None:
-        print(f"[ERROR] Task {task_id} failed to find <POST> tags")
+    if isinstance(slop_post, utils.ErrorResponse):
+        print(slop_post)
         return
 
     clean_up_prompt = prompt_generator.generate_clean_up_prompt(slop_post)
 
     print(f"[INFO] Task {task_id} making clean-up request")
     clean_post = await request_handler.get_clean_post(clean_up_prompt)
-    if clean_post is None:
-        print(f"[ERROR] Task {task_id} failed to find <POST> tags")
+    if isinstance(clean_post, utils.ErrorResponse):
+        print(clean_post)
         return
 
     print(f"[INFO] Task {task_id} writing to file")
