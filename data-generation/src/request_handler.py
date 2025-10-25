@@ -45,15 +45,15 @@ class RequestHandler:
 
         self._session: aiohttp.ClientSession = aiohttp.ClientSession()
 
-    async def get_slop_post(self, prompt: str) -> str | None:
+    async def get_slop_post(self, slop_prompt: str) -> str | None:
         """Calls LLM API to generate a slop LinkedIn post"""
         model = random.choice(self.slop_models)
-        return await self._get_post(model, prompt, self.slop_temperature)
+        return await self._get_post(model, slop_prompt, self.slop_temperature)
 
-    async def get_clean_post(self, prompt: str) -> str | None:
+    async def get_clean_post(self, clean_up_prompt: str) -> str | None:
         """Calls LLM API to generate a cleaned up LinkedIn post"""
         model = random.choice(self.clean_up_models)
-        return await self._get_post(model, prompt, self.clean_up_temperature)
+        return await self._get_post(model, clean_up_prompt, self.clean_up_temperature)
 
     async def _get_post(
         self, model: str, prompt: str, temperature: float

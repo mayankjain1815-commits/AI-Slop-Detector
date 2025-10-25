@@ -12,8 +12,8 @@ class FileWriter:
         self.file_name: str = f"{PATH}/{uuid.uuid4()}.jsonl"
         self.lock: asyncio.Lock = asyncio.Lock()
 
-    async def write(self, slop: str, clean: str):
-        datum = {"slop": slop, "clean": clean}
+    async def write(self, slop_post: str, clean_post: str) -> None:
+        datum = {"slop": slop_post, "clean": clean_post}
 
         async with (
             self.lock,
