@@ -9,7 +9,8 @@ PATH = "../data"
 
 class FileWriter:
     def __init__(self, path: str = PATH):
-        self.file_name: str = f"{PATH}/{uuid.uuid4()}.jsonl"
+        self.id: uuid.UUID = uuid.uuid4()
+        self.file_name: str = f"{PATH}/{self.id}.jsonl"
         self.lock: asyncio.Lock = asyncio.Lock()
 
     async def write(self, slop_post: str, clean_post: str) -> None:

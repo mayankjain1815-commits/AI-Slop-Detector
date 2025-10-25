@@ -47,13 +47,14 @@ async def main():
         RateLimiter(SECONDS_BETWEEN_REQUESTS),
     )
     file_writer = FileWriter()
+    print(f"[INFO] Created FileWriter with ID {file_writer.id}")
 
     tasks = [
         run_task(prompt_generator, request_handler, file_writer, idx)
         for idx in range(N_DATA)
     ]
 
-    await asyncio.gather(*tasks)
+    _ = await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":
