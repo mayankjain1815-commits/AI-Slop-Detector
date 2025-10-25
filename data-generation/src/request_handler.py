@@ -43,8 +43,6 @@ class RequestHandler:
         self.slop_temperature: float = slop_temperature
         self.clean_up_temperature: float = clean_up_temperature
 
-        self._session: aiohttp.ClientSession = aiohttp.ClientSession()
-
     async def get_slop_post(self, slop_prompt: str) -> str | None:
         """Calls LLM API to generate a slop LinkedIn post"""
         model = random.choice(self.slop_models)
@@ -60,9 +58,9 @@ class RequestHandler:
     ) -> str | None:
         """Calls LLM API to generate a LinkedIn post"""
         async with (
-            self._session,
+            aiohttp.ClientSession() as session,
             self.rate_limiter,
-            self._session.post(
+            session.post(
                 url=self.url,
                 headers=self._get_headers(),
                 json=self._get_json_body(model, prompt, temperature),
