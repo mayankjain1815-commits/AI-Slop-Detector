@@ -71,6 +71,7 @@ class RequestHandler:
                 data = await response.json()  # pyright:ignore[reportAny]
             except Exception:
                 result = ErrorResponse("Could not get JSON response")
+                return result
 
             try:
                 text: str = data["choices"][0]["text"]  # pyright:ignore[reportAny]
