@@ -11,7 +11,7 @@ class ErrorResponse:
 
     @override
     def __str__(self) -> str:
-        result = f"[ERROR] {self.reason}"
+        result = f"[ERROR] {self.reason}\n"
         for context in self.contexts:
             result += f"- {context}\n"
 
