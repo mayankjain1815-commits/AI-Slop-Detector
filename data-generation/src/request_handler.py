@@ -19,7 +19,7 @@ CLEAN_UP_MODELS = [
     "google/gemma-3-27b-it:free",
 ]
 
-SLOP_TEMPERATURE = 1.25
+SLOP_TEMPERATURE = 1.0
 CLEAN_UP_TEMPERATURE = 1.0
 
 
