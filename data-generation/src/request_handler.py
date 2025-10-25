@@ -69,14 +69,12 @@ class RequestHandler:
         ):
             try:
                 data = await response.json()  # pyright:ignore[reportAny]
-            except:
-                result = ErrorResponse("Unable to serialize JSON")
-                result.add_context([f"Response: {response}"])
-                return result
+            except Exception:
+                result = ErrorResponse("Could not get JSON response")
 
             try:
                 text: str = data["choices"][0]["text"]  # pyright:ignore[reportAny]
-            except KeyError:
+            except Exception:
                 result = ErrorResponse("Error response from OpenRouter")
                 result.add_context(
                     [
