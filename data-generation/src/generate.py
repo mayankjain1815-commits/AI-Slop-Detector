@@ -7,8 +7,8 @@ from request_handler import RequestHandler
 from file_writer import FileWriter
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-N_DATA = 3  # OpenRouter limits to 1000 requests per day => 500 data points per run
 SECONDS_BETWEEN_REQUESTS = 3.01  # OpenRouter rate limit is 20 requests / minute
+N_DATA = 10  # OpenRouter limits to 1000 requests per day => 500 data points per run
 
 ENV = utils.get_env()
 
