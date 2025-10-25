@@ -19,5 +19,5 @@ class FileWriter:
             self.lock,
             aiofiles.open(self.file_name, "a", encoding="utf-8") as file,
         ):
-            await file.write(json.dumps(datum, ensure_ascii=False))
-            await file.write("\n")
+            _ = await file.write(json.dumps(datum, ensure_ascii=False))
+            _ = await file.write("\n")
