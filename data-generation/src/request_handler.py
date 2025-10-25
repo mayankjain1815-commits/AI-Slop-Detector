@@ -114,7 +114,10 @@ class RequestHandler:
         matches: list[str] = re.findall(r"<POST>(.*?)</POST>", response, re.DOTALL)
         if matches:
             # Return last match in case model is weird and includes original post in response.
-            return matches[-1]
+            post = matches[-1]
+            post = post.strip()
+
+            return post
 
         result = ErrorResponse("Failed to find <POST> tags")
 
