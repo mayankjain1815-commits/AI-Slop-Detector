@@ -67,6 +67,8 @@ class RequestHandler:
                 json=self._get_json_body(model, prompt, temperature),
             ) as response,
         ):
+            print("[RATE LIMITER] Making request")
+
             try:
                 data = await response.json()  # pyright:ignore[reportAny]
             except Exception:
