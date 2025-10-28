@@ -8,15 +8,17 @@ from rate_limiter import RateLimiter
 
 SLOP_MODELS = [
     "openai/gpt-oss-20b:free",
-    "deepseek/deepseek-chat-v3.1:free",
+    # "deepseek/deepseek-chat-v3.1:free",
     # "z-ai/glm-4.5-air:free",
     "google/gemma-3-27b-it:free",
+    "moonshotai/kimi-k2:free",
 ]
 
 CLEAN_UP_MODELS = [
-    "deepseek/deepseek-chat-v3.1:free",
+    # "deepseek/deepseek-chat-v3.1:free",
     # "z-ai/glm-4.5-air:free",
     "google/gemma-3-27b-it:free",
+    "moonshotai/kimi-k2:free",
 ]
 
 SLOP_TEMPERATURE = 1.0
