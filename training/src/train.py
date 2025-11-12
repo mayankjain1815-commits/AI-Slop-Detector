@@ -8,8 +8,9 @@ from transformers import (
     Seq2SeqTrainingArguments, Seq2SeqTrainer
 )
 import evaluate
-import torch
 import nltk
+# nltk.download('punkt_tab')
+import numpy as np
 
 
 def get_datasets() -> DatasetDict:
@@ -38,18 +39,25 @@ def _preprocess_function(
 
 
 def _compute_metrics(
-    eval_pred: tuple[torch.Tensor, torch.Tensor],
+    eval_pred: tuple[np.ndarray, np.ndarray],
     tokenizer: T5Tokenizer,
     metric: evaluate.EvaluationModule,
 ) -> dict[str, float]:
     predictions, labels = eval_pred
-    decoded_preds: list[str] = tokenizer.batch_decode(predictions, skip_special_tokens=True)
 
-    # -100 token is unknown
-    labels = torch.where(labels != -100, labels, tokenizer.pad_token_type_id)
+    predictions = np.where(predictions != -100, predictions, tokenizer.pad_token_id)
+    decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+
+    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
-    # Rouge expects newline after each sentence
+    # Compute generation lengths
+    gen_lengths = [len(tokenizer.encode(pred, add_special_tokens=False)) for pred in decoded_preds]
+    length_min = np.min(gen_lengths) if gen_lengths else 0
+    length_median = np.median(gen_lengths) if gen_lengths else 0
+    length_max = np.max(gen_lengths) if gen_lengths else 0
+
+    # Format for ROUGE
     decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
     decoded_labels = ["\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels]
 
@@ -57,12 +65,15 @@ def _compute_metrics(
         predictions=decoded_preds, references=decoded_labels,
         use_stemmer=True, use_aggregator=True
     )
-    assert result != None
+    assert result is not None
 
-    result = {key: 100 * value for key, value in result.items()}
+    result.update({
+        "gen_length_min": length_min,
+        "gen_length_median": length_median,
+        "gen_length_max": length_max,
+        "sample_pred": decoded_preds[0] if decoded_preds else None,
+    })
 
-    # pred_lengths = [torch.count_nonzero(pred != tokenizer.pad_token_id) for pred in predictions]
-    
     return result
 
 
