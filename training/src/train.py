@@ -3,7 +3,7 @@ from functools import partial
 import datasets
 from datasets import DatasetDict, Dataset
 from transformers import (
-    T5Tokenizer, BatchEncoding,
+    BartTokenizer, BatchEncoding,
     AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq,
     Seq2SeqTrainingArguments, Seq2SeqTrainer
 )
@@ -15,36 +15,38 @@ import numpy as np
 
 def get_datasets() -> DatasetDict:
     data_files = {"train": "../data/train/*.jsonl", "test": "../data/test/*.jsonl"}
-
+    
     dataset = datasets.load_dataset("json", data_files=data_files)
     assert isinstance(dataset, DatasetDict)
-
+    
     return dataset
 
 
 def _preprocess_function(
     dataset: Dataset | dict,
-    tokenizer: T5Tokenizer,
-    prefix: str = "summarize: ",
-    max_slop_length: int = 1024,
-    max_clean_length: int = 1024,
+    tokenizer: BartTokenizer,
+    max_input_length: int = 1024,
+    max_target_length: int = 1024,
 ) -> BatchEncoding:
-    inputs = [prefix + slop for slop in dataset["slop"]]
-    result = tokenizer(inputs, max_length=max_slop_length, truncation=True)
+    """Preprocess the dataset for BART conditional generation."""
+    inputs = dataset["slop"]
+    targets = dataset["clean"]
 
-    cleans = tokenizer(dataset["clean"], max_length=max_clean_length, truncation=True)
+    model_inputs = tokenizer(inputs, max_length=max_input_length, truncation=True)
+    labels = tokenizer(targets, max_length=max_target_length, truncation=True)
 
-    result["labels"] = cleans["input_ids"]
-    return result
+    model_inputs["labels"] = labels["input_ids"]
+    return model_inputs
 
 
 def _compute_metrics(
     eval_pred: tuple[np.ndarray, np.ndarray],
-    tokenizer: T5Tokenizer,
+    tokenizer: BartTokenizer,
     metric: evaluate.EvaluationModule,
 ) -> dict[str, float]:
     predictions, labels = eval_pred
 
+    assert isinstance(tokenizer.pad_token_id, int)
     predictions = np.where(predictions != -100, predictions, tokenizer.pad_token_id)
     decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
 
@@ -80,27 +82,42 @@ def _compute_metrics(
 if __name__ == "__main__":
     raw_datasets = get_datasets()
 
-    checkpoint = "t5-small"
-    tokenizer = T5Tokenizer.from_pretrained(checkpoint)
+    checkpoint = "facebook/bart-base"
+    tokenizer = BartTokenizer.from_pretrained(checkpoint)
     model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint)
 
-    metric = evaluate.load('rouge')
+    metric = evaluate.load("rouge")
 
     preprocess_function = partial(_preprocess_function, tokenizer=tokenizer)
     tokenized_datasets = raw_datasets.map(preprocess_function, batched=True)
 
-    batch_size = 16
+    train_batch_size = 2
+    gradient_accumulation_steps = 16
+    eval_batch_size = 4
+    
     training_args = Seq2SeqTrainingArguments(
-        f"checkpoints/{checkpoint.split('/')[-1]}-finetuned",
-        eval_strategy="epoch",
-        learning_rate=1e-4,
-        per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size,
-        weight_decay=0.01,
-        save_total_limit=3,
-        num_train_epochs=1,
-        predict_with_generate=True,
-        fp16=True
+        f"../models/bart-base-finetuned",
+
+        num_train_epochs = 500,
+        learning_rate = 5e-5,
+        weight_decay = 0.005,
+        
+        per_device_train_batch_size = train_batch_size,
+        per_device_eval_batch_size = eval_batch_size,
+        gradient_accumulation_steps = gradient_accumulation_steps,
+        fp16 = True,
+
+        save_strategy = "best",
+        save_total_limit = 5,
+        metric_for_best_model = "eval_loss",
+        
+        eval_strategy = "steps",
+        eval_steps = 300,
+        predict_with_generate = True,
+        generation_max_length = 512,
+
+        logging_strategy="steps",
+        logging_steps = 150,
     )
 
     data_collator = DataCollatorForSeq2Seq(tokenizer, model)
@@ -110,10 +127,9 @@ if __name__ == "__main__":
         model,
         training_args,
         train_dataset=tokenized_datasets["train"],
-        eval_dataset=tokenized_datasets["test"], # type: ignore
+        eval_dataset=tokenized_datasets["test"],  # type: ignore
         data_collator=data_collator,
-        # tokenizer=tokenizer,
-        compute_metrics=compute_metrics # type: ignore
+        compute_metrics=compute_metrics,  # type: ignore
     )
 
     trainer.train()
