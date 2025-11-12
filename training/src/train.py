@@ -86,6 +86,11 @@ if __name__ == "__main__":
     tokenizer = BartTokenizer.from_pretrained(checkpoint)
     model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint)
 
+    model.generation_config.early_stopping = True
+    model.generation_config.num_beams = 2
+    model.generation_config.no_repeat_ngram_size = 3
+    model.generation_config.forced_bos_token_id = 0
+
     metric = evaluate.load("rouge")
 
     preprocess_function = partial(_preprocess_function, tokenizer=tokenizer)
@@ -98,7 +103,7 @@ if __name__ == "__main__":
     training_args = Seq2SeqTrainingArguments(
         f"../models/bart-base-finetuned",
 
-        num_train_epochs = 500,
+        num_train_epochs = 100,
         learning_rate = 5e-5,
         weight_decay = 0.005,
         
