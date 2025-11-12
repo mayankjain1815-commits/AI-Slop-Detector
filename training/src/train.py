@@ -103,7 +103,7 @@ if __name__ == "__main__":
     training_args = Seq2SeqTrainingArguments(
         f"../models/bart-base-finetuned",
 
-        num_train_epochs = 100,
+        num_train_epochs = 200,
         learning_rate = 5e-5,
         weight_decay = 0.005,
         
