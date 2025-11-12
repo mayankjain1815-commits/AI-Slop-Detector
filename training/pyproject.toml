@@ -9,6 +9,7 @@ dependencies = [
     "datasets>=4.4.0",
     "evaluate>=0.4.6",
     "nltk>=3.9.2",
+    "numpy>=2.3.4",
     "rouge-score>=0.1.2",
     "sentencepiece>=0.2.1",
     "torch>=2.9.0",
