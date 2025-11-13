@@ -1,5 +1,5 @@
-from copy import deepcopy
 import random
+from copy import deepcopy
 
 TOPICS = {
     "Professional Development": [
@@ -136,7 +136,7 @@ class PromptGenerator:
         topic = random.choice(list(self.topics.keys()))
         subtopic = random.choice(self.topics[topic])
 
-        heading = f"Write me a LinkedIn post in/on the category/topic of '{topic}', particularly discussing '{subtopic}'.\n\n"
+        heading = f"Write me a LinkedIn post on the category or topic of {topic}, particularly discussing {subtopic}. (Do not feel the need to include the topic name in the post!)\n\n"
 
         feature_list = [
             f"- {feature}\n"

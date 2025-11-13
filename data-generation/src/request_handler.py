@@ -115,6 +115,9 @@ class RequestHandler:
 
     def _parse_response_text(self, response: str) -> str | ErrorResponse:
         """Parses a response for content between <POST> and </POST> tags"""
+        # Common failure mode for models to forget closing tag. This regex match should be robust to adding an extra.
+        response += "</POST>"
+
         matches: list[str] = re.findall(r"<POST>(.*?)</POST>", response, re.DOTALL)
         if matches:
             # Return last match in case model is weird and includes original post in response.
