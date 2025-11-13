@@ -101,7 +101,7 @@ if __name__ == "__main__":
     eval_batch_size = 4
     
     training_args = Seq2SeqTrainingArguments(
-        f"../models/bart-base-finetuned",
+        "../models/bart-base-finetuned",
 
         num_train_epochs = 200,
         learning_rate = 5e-5,
