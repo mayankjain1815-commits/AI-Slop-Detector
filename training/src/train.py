@@ -1,24 +1,30 @@
 from functools import partial
 
 import datasets
-from datasets import DatasetDict, Dataset
-from transformers import (
-    BartTokenizer, BatchEncoding,
-    AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq,
-    Seq2SeqTrainingArguments, Seq2SeqTrainer
-)
 import evaluate
 import nltk
-# nltk.download('punkt_tab')
 import numpy as np
+from datasets import Dataset, DatasetDict
+from transformers import (
+    AutoModelForSeq2SeqLM,
+    BartTokenizer,
+    BatchEncoding,
+    DataCollatorForSeq2Seq,
+    Seq2SeqTrainer,
+    Seq2SeqTrainingArguments,
+)
+
+from utils import remove_emojis
+
+# nltk.download('punkt_tab')
 
 
 def get_datasets() -> DatasetDict:
     data_files = {"train": "../data/train/*.jsonl", "test": "../data/test/*.jsonl"}
-    
+
     dataset = datasets.load_dataset("json", data_files=data_files)
     assert isinstance(dataset, DatasetDict)
-    
+
     return dataset
 
 
@@ -31,6 +37,9 @@ def _preprocess_function(
     """Preprocess the dataset for BART conditional generation."""
     inputs = dataset["slop"]
     targets = dataset["clean"]
+
+    inputs = [remove_emojis(input) for input in inputs]
+    targets = [remove_emojis(target) for target in targets]
 
     model_inputs = tokenizer(inputs, max_length=max_input_length, truncation=True)
     labels = tokenizer(targets, max_length=max_target_length, truncation=True)
@@ -54,27 +63,37 @@ def _compute_metrics(
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
     # Compute generation lengths
-    gen_lengths = [len(tokenizer.encode(pred, add_special_tokens=False)) for pred in decoded_preds]
+    gen_lengths = [
+        len(tokenizer.encode(pred, add_special_tokens=False)) for pred in decoded_preds
+    ]
     length_min = np.min(gen_lengths) if gen_lengths else 0
     length_median = np.median(gen_lengths) if gen_lengths else 0
     length_max = np.max(gen_lengths) if gen_lengths else 0
 
     # Format for ROUGE
-    decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
-    decoded_labels = ["\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels]
+    decoded_preds = [
+        "\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds
+    ]
+    decoded_labels = [
+        "\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels
+    ]
 
     result = metric.compute(
-        predictions=decoded_preds, references=decoded_labels,
-        use_stemmer=True, use_aggregator=True
+        predictions=decoded_preds,
+        references=decoded_labels,
+        use_stemmer=True,
+        use_aggregator=True,
     )
     assert result is not None
 
-    result.update({
-        "gen_length_min": length_min,
-        "gen_length_median": length_median,
-        "gen_length_max": length_max,
-        "sample_pred": decoded_preds[0] if decoded_preds else None,
-    })
+    result.update(
+        {
+            "gen_length_min": length_min,
+            "gen_length_median": length_median,
+            "gen_length_max": length_max,
+            "sample_pred": decoded_preds[0] if decoded_preds else None,
+        }
+    )
 
     return result
 
@@ -99,30 +118,25 @@ if __name__ == "__main__":
     train_batch_size = 2
     gradient_accumulation_steps = 16
     eval_batch_size = 4
-    
+
     training_args = Seq2SeqTrainingArguments(
         "../models/bart-base-finetuned",
-
-        num_train_epochs = 200,
-        learning_rate = 5e-5,
-        weight_decay = 0.005,
-        
-        per_device_train_batch_size = train_batch_size,
-        per_device_eval_batch_size = eval_batch_size,
-        gradient_accumulation_steps = gradient_accumulation_steps,
-        fp16 = True,
-
-        save_strategy = "best",
-        save_total_limit = 5,
-        metric_for_best_model = "eval_loss",
-        
-        eval_strategy = "steps",
-        eval_steps = 300,
-        predict_with_generate = True,
-        generation_max_length = 512,
-
+        num_train_epochs=200,
+        learning_rate=5e-5,
+        weight_decay=0.005,
+        per_device_train_batch_size=train_batch_size,
+        per_device_eval_batch_size=eval_batch_size,
+        gradient_accumulation_steps=gradient_accumulation_steps,
+        fp16=True,
+        save_strategy="best",
+        save_total_limit=5,
+        metric_for_best_model="eval_loss",
+        eval_strategy="steps",
+        eval_steps=300,
+        predict_with_generate=True,
+        generation_max_length=512,
         logging_strategy="steps",
-        logging_steps = 150,
+        logging_steps=150,
     )
 
     data_collator = DataCollatorForSeq2Seq(tokenizer, model)
