@@ -16,8 +16,6 @@ from transformers import (
 
 from utils import remove_emojis
 
-# nltk.download('punkt_tab')
-
 
 def get_datasets() -> DatasetDict:
     data_files = {"train": "../data/train/*.jsonl", "test": "../data/test/*.jsonl"}
@@ -99,6 +97,11 @@ def _compute_metrics(
 
 
 if __name__ == "__main__":
+    try:
+        nltk.data.find("tokenizers/punkt_tab")
+    except:
+        nltk.download("punkt_tab")
+
     raw_datasets = get_datasets()
 
     checkpoint = "facebook/bart-base"
@@ -121,20 +124,25 @@ if __name__ == "__main__":
 
     training_args = Seq2SeqTrainingArguments(
         "../models/bart-base-finetuned",
+        
         num_train_epochs=200,
         learning_rate=5e-5,
         weight_decay=0.005,
+        
         per_device_train_batch_size=train_batch_size,
         per_device_eval_batch_size=eval_batch_size,
         gradient_accumulation_steps=gradient_accumulation_steps,
         fp16=True,
+        
         save_strategy="best",
         save_total_limit=5,
         metric_for_best_model="eval_loss",
+        
         eval_strategy="steps",
         eval_steps=300,
         predict_with_generate=True,
         generation_max_length=512,
+        
         logging_strategy="steps",
         logging_steps=150,
     )
