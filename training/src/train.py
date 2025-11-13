@@ -36,8 +36,13 @@ def _preprocess_function(
     inputs = dataset["slop"]
     targets = dataset["clean"]
 
+    # Remove emojis to make model's life easier
     inputs = [remove_emojis(input) for input in inputs]
     targets = [remove_emojis(target) for target in targets]
+
+    # Clean posts should map to clean posts
+    inputs.extend(targets)
+    targets.extend(targets)
 
     model_inputs = tokenizer(inputs, max_length=max_input_length, truncation=True)
     labels = tokenizer(targets, max_length=max_target_length, truncation=True)
@@ -125,7 +130,7 @@ if __name__ == "__main__":
     training_args = Seq2SeqTrainingArguments(
         "../models/bart-base-finetuned",
         
-        num_train_epochs=200,
+        num_train_epochs=30,
         learning_rate=5e-5,
         weight_decay=0.005,
         
@@ -139,12 +144,11 @@ if __name__ == "__main__":
         metric_for_best_model="eval_loss",
         
         eval_strategy="steps",
-        eval_steps=300,
+        eval_steps = 5 * 43,
         predict_with_generate=True,
         generation_max_length=512,
         
-        logging_strategy="steps",
-        logging_steps=150,
+        logging_strategy="epoch",
     )
 
     data_collator = DataCollatorForSeq2Seq(tokenizer, model)
