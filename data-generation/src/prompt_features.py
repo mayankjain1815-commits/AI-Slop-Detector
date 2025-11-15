@@ -1,7 +1,7 @@
 SLOP_FEATURES = [
     "An emoji and a 'it's not X, it's Y' headline",
-    "A vague opening about what 'too many' people do wrong",
-    "A numbered list (3-5 items) with emoji bullets",
+    "An opening about what too many people do wrong",
+    "A numbered list (3-5 items)",
     "Corporate buzzwords like 'synergy,' 'leverage,' 'scalable,' 'pain points'",
     "At least one mathematical formula metaphor (e.g., 'X + Y = Z')",
     "An alliterative phrase",
@@ -803,10 +803,10 @@ TOPICS = {
             "about how I never thought I'd be speaking at this prestigious event",
             "about how 5 years ago I had nothing, today I have everything",
             "about blessed to work with these amazing clients",
-            "about honestly overwhelmed by all the opportunities coming my way",
+            "about how I'm honestly overwhelmed by all the opportunities coming my way",
             "about how my inbox is flooded but I love what I do",
             "about how turning down opportunities is the hardest part of success",
-            "about imposter syndrome hitting different when I reached an impressive milestone",
+            "about imposter syndrome hitting different when I reached a recent impressive milestone",
             "with a reminder that hard work pays off",
         ],
         [

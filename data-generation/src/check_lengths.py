@@ -35,9 +35,11 @@ def main():
             if (
                 slop_length >= sorted_slop_lengths[-3]
                 or slop_length <= sorted_slop_lengths[3]
+                # or "[" in datum["slop"]  # check for [placeholders]
             ):
-                print(f"ABNORMAL SLOP: {file_path}, {idx + 1}")
-                print("======================================")
+                title = f"ABNORMAL SLOP: {file_path}, {idx + 1}"
+                print(title)
+                print("=" * len(title))
                 print(datum["slop"])
                 _ = input("")
 
@@ -45,9 +47,11 @@ def main():
             if (
                 clean_length >= sorted_clean_lengths[-3]
                 or clean_length <= sorted_clean_lengths[3]
+                # or "[" in datum["clean"]  # check for [placeholders]
             ):
-                print(f"ABNORMAL CLEAN: {file_path}, {idx + 1}")
-                print("=======================================")
+                title = f"ABNORMAL CLEAN: {file_path}, {idx + 1}"
+                print(title)
+                print("=" * len(title))
                 print(datum["clean"])
                 _ = input("")
 
