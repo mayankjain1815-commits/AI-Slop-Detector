@@ -92,9 +92,3 @@ class PromptGenerator:
         prompt = f"{heading}{post}{rules}{closing}"
 
         return prompt
-
-
-if __name__ == "__main__":
-    pg = PromptGenerator()
-
-    print(pg.generate_slop_prompt())
