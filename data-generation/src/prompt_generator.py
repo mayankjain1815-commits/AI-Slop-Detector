@@ -43,12 +43,10 @@ class PromptGenerator:
             )
 
         if random.random() < 0.5:
-            heading += (
-                " Make sure to write from a first person (story-telling) perspective."
-            )
+            heading += " Make sure to write from a first person perspective."
 
         heading += "\n\n"
-        heading += "Feel free to make up any details about me or the subject. I can fill in the real details later, but I want to get a sense for what the completed post could look like, so DO NOT use any placeholders."
+        heading += "Make up any details about me or the subject that you need. DO NOT use any placeholders. I can fill in the real details later, but I want to get a sense for what the completed post would look like, so DO NOT use any placeholders."
         heading += "\n\n"
 
         # Changing p_feature gives diversity; sometimes low number of features, sometimes high
