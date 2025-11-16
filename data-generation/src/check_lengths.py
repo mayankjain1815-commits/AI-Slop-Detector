@@ -11,7 +11,7 @@ def get_data(file_path: str) -> Generator[dict[str, str], None, None]:
 
 
 def main():
-    file_paths = glob.glob("../data/train/*.jsonl")
+    file_paths = glob.glob("../data/*.jsonl")
 
     slop_lengths = []
     clean_lengths = []
