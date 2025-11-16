@@ -11,14 +11,20 @@ SLOP_MODELS = [
     # "deepseek/deepseek-chat-v3.1:free",
     "z-ai/glm-4.5-air:free",
     "google/gemma-3-27b-it:free",
-    "moonshotai/kimi-k2:free",
+    # "moonshotai/kimi-k2:free",
+    "openrouter/sherlock-dash-alpha",
+    "openrouter/sherlock-think-alpha",
+    # "qwen/qwen3-14b:free",
 ]
 
 CLEAN_UP_MODELS = [
     # "deepseek/deepseek-chat-v3.1:free",
     "z-ai/glm-4.5-air:free",
     "google/gemma-3-27b-it:free",
-    "moonshotai/kimi-k2:free",
+    # "moonshotai/kimi-k2:free",
+    "openrouter/sherlock-dash-alpha",
+    "openrouter/sherlock-think-alpha",
+    # "qwen/qwen3-14b:free",
 ]
 
 SLOP_TEMPERATURE = 1.0

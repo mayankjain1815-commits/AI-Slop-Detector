@@ -11,7 +11,7 @@ def get_data(file_path: str) -> Generator[dict[str, str], None, None]:
 
 
 def main():
-    file_paths = glob.glob("../data/*.jsonl")
+    file_paths = glob.glob("../data/train/*.jsonl")
 
     slop_lengths = []
     clean_lengths = []
@@ -33,9 +33,9 @@ def main():
         for idx, datum in enumerate(data):
             slop_length = len(datum["slop"])
             if (
-                slop_length >= sorted_slop_lengths[-3]
-                or slop_length <= sorted_slop_lengths[3]
-                # or "[" in datum["slop"]  # check for [placeholders]
+                # slop_length >= sorted_slop_lengths[-3]
+                # or slop_length <= sorted_slop_lengths[3]
+                "[" in datum["slop"]  # check for [placeholders]
             ):
                 title = f"ABNORMAL SLOP: {file_path}, {idx + 1}"
                 print(title)
@@ -45,9 +45,9 @@ def main():
 
             clean_length = len(datum["clean"])
             if (
-                clean_length >= sorted_clean_lengths[-3]
-                or clean_length <= sorted_clean_lengths[3]
-                # or "[" in datum["clean"]  # check for [placeholders]
+                # clean_length >= sorted_clean_lengths[-3]
+                # or clean_length <= sorted_clean_lengths[3]
+                "[" in datum["clean"]  # check for [placeholders]
             ):
                 title = f"ABNORMAL CLEAN: {file_path}, {idx + 1}"
                 print(title)
