@@ -25,20 +25,20 @@ def get_datasets() -> DatasetDict:
 
     # Augmentations: Clean should map to clean
     train_dataset = dataset["train"]
-    test_dataset = dataset["test"]
+    # test_dataset = dataset["test"]
     
     augmented_train = Dataset.from_dict({
         "slop": train_dataset["clean"],
         "clean": train_dataset["clean"]
     })    
     
-    augmented_test = Dataset.from_dict({
-        "slop": test_dataset["clean"],
-        "clean": test_dataset["clean"]
-    })
+    # augmented_test = Dataset.from_dict({
+        # "slop": test_dataset["clean"],
+        # "clean": test_dataset["clean"]
+    # })
 
     dataset["train"] = concatenate_datasets([train_dataset, augmented_train])
-    dataset["test"] = concatenate_datasets([test_dataset, augmented_test])
+    # dataset["test"] = concatenate_datasets([test_dataset, augmented_test])
 
     return dataset
 
