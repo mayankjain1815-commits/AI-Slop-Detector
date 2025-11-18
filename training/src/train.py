@@ -152,16 +152,19 @@ if __name__ == "__main__":
         gradient_accumulation_steps=gradient_accumulation_steps,
         fp16=True,
         
-        save_strategy="best",
+        save_strategy="steps",
         save_total_limit=5,
+        save_steps=128,
         metric_for_best_model="eval_loss",
+        load_best_model_at_end=True,
         
         eval_strategy="steps",
-        eval_steps = 5 * 43,
+        eval_steps=128,
         predict_with_generate=True,
         generation_max_length=512,
         
-        logging_strategy="epoch",
+        logging_strategy="steps",
+        logging_steps=64,
     )
 
     data_collator = DataCollatorForSeq2Seq(tokenizer, model)
