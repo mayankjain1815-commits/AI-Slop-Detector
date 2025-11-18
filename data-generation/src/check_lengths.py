@@ -33,21 +33,25 @@ def main():
         for idx, datum in enumerate(data):
             slop_length = len(datum["slop"])
             if (
-                slop_length >= sorted_slop_lengths[-3]
-                or slop_length <= sorted_slop_lengths[3]
+                # slop_length >= sorted_slop_lengths[-3]
+                # or slop_length <= sorted_slop_lengths[3]
+                "[" in datum["slop"]  # check for [placeholders]
             ):
-                print(f"ABNORMAL SLOP: {file_path}, {idx + 1}")
-                print("======================================")
+                title = f"ABNORMAL SLOP: {file_path}, {idx + 1}"
+                print(title)
+                print("=" * len(title))
                 print(datum["slop"])
                 _ = input("")
 
             clean_length = len(datum["clean"])
             if (
-                clean_length >= sorted_clean_lengths[-3]
-                or clean_length <= sorted_clean_lengths[3]
+                # clean_length >= sorted_clean_lengths[-3]
+                # or clean_length <= sorted_clean_lengths[3]
+                "[" in datum["clean"]  # check for [placeholders]
             ):
-                print(f"ABNORMAL CLEAN: {file_path}, {idx + 1}")
-                print("=======================================")
+                title = f"ABNORMAL CLEAN: {file_path}, {idx + 1}"
+                print(title)
+                print("=" * len(title))
                 print(datum["clean"])
                 _ = input("")
 

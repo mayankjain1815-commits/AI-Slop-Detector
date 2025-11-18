@@ -1,117 +1,15 @@
 import random
 from copy import deepcopy
 
-TOPICS = {
-    "Professional Development": [
-        "Leadership & management",
-        "Career advancement/transitions",
-        "Skill development & learning",
-        "Work-life balance/boundaries",
-        "Personal branding",
-        "Networking strategies",
-        "Mentorship & coaching",
-    ],
-    "Business Strategy & Operations": [
-        "Sales & revenue growth",
-        "Marketing & brand building",
-        "Customer success/retention",
-        "Product management",
-        "Business development",
-        "Entrepreneurship & startups",
-        "Scaling & growth strategies",
-    ],
-    "Workplace Culture & HR": [
-        "Company culture",
-        "Employee engagement",
-        "Diversity, equity & inclusion",
-        "Remote/hybrid work",
-        "Hiring & recruitment",
-        "Talent retention",
-        "Team building",
-    ],
-    "Industry-Specific Topics": [
-        "Tech & software development",
-        "Finance & investing",
-        "Healthcare & pharma",
-        "Manufacturing & supply chain",
-        "Real estate",
-        "Consulting",
-        "Legal & compliance",
-    ],
-    "Thought Leadership": [
-        "Industry trends & predictions",
-        "Innovation & disruption",
-        "Digital transformation",
-        "Sustainability & ESG",
-        "Economic analysis",
-        "Market insights",
-    ],
-    "Tactical/Operational": [
-        "Productivity hacks",
-        "Time management",
-        "Email/communication best practices",
-        "Meeting optimization",
-        "Project management",
-        "Negotiation tactics",
-        "Data & analytics",
-    ],
-    "Soft Skills & Mindset": [
-        "Communication skills",
-        "Emotional intelligence",
-        "Resilience & failure",
-        "Authenticity & vulnerability",
-        "Decision-making",
-        "Critical thinking",
-        "Collaboration",
-    ],
-    "Self-Promotion Disguised as Insight": [
-        "My journey stories",
-        "Humble brags",
-        "Company announcements framed as wisdom",
-        "Award/recognition posts",
-        "What I learned from [recent experience]",
-    ],
-    "Meta-LinkedIn Content": [
-        "How to post on LinkedIn",
-        "LinkedIn algorithm tips",
-        "Personal brand building on LinkedIn",
-        "Authenticity on social media",
-    ],
-}
-
-SLOP_FEATURES = [
-    "An emoji and a 'it's not X, it's Y' headline",
-    "A vague opening about what 'too many' people do wrong",
-    "A numbered list (3-5 items) with emoji bullets",
-    "Corporate buzzwords like 'synergy,' 'leverage,' 'scalable,' 'pain points'",
-    "At least one mathematical formula metaphor (e.g., 'X + Y = Z')",
-    "An alliterative phrase",
-    "A 'Stop [X]. Start [Y].' statement",
-    "End with a light bulb emoji and engagement question",
-    "2-6 relevant hashtags",
-]
-
-CLEAN_UP_RULES = [
-    "Remove any 'it's not X, it's Y'-style language",
-    "Refrain from using emojis",
-    "Remove any **bold** text, especially after a bullet point",
-    "Replace buzzwords with specific, concrete language",
-    "Convert vague platitudes into actual actionable advice or omit it when there's no real content",
-    "Remove false dichotomies and artificial urgency",
-    "If a point is substantive, keep it but make it direct",
-    "If a point is empty filler, cut it",
-    "Remove the engagement bait question",
-    "Remove hashtags",
-    "Write like a human having a real conversation",
-]
+from prompt_features import CLEAN_UP_RULES, SLOP_FEATURES, TOPICS
 
 
 class PromptGenerator:
     def __init__(
         self,
-        topics: dict[str, list[str]] = TOPICS,
+        topics: dict[str, list[list[str]]] = TOPICS,
         features: list[str] = SLOP_FEATURES,
-        p_feature: float = 0.1,
+        p_feature: float | None = None,
         clean_up_rules: list[str] = CLEAN_UP_RULES,
         p_rule: float = 1.0,
     ):
@@ -123,10 +21,10 @@ class PromptGenerator:
             clean_up_rules: List of suggested ways to clean up the post
             p_rule: Probability that any given clean-up rule is given in the prompt
         """
-        self.topics: dict[str, list[str]] = deepcopy(topics)
+        self.topics: dict[str, list[list[str]]] = deepcopy(topics)
 
         self.all_features: list[str] = features.copy()
-        self.p_feature: float = p_feature
+        self.p_feature: float | None = p_feature
 
         self.clean_up_rules: list[str] = clean_up_rules.copy()
         self.p_rule: float = p_rule
@@ -134,14 +32,29 @@ class PromptGenerator:
     def generate_slop_prompt(self) -> str:
         """Generates a prompt asking the LLM to write slop"""
         topic = random.choice(list(self.topics.keys()))
-        subtopic = random.choice(self.topics[topic])
+        subtopic_list = random.choice(self.topics[topic])
+        subtopic = random.choice(subtopic_list)
 
-        heading = f"Write me a LinkedIn post on the category or topic of {topic}, particularly discussing {subtopic}. (Do not feel the need to include the topic name in the post!)\n\n"
+        heading = f"Write me a LinkedIn post {subtopic}."
 
+        if random.random() < 0.5:
+            heading += (
+                " Focus on *one* actionable suggestion, rather than a series of tips."
+            )
+
+        if random.random() < 0.5:
+            heading += " Make sure to write from a first person perspective."
+
+        heading += "\n\n"
+        heading += "Make up any details about me or the subject that you need. DO NOT use any placeholders. I can fill in the real details later, but I want to get a sense for what the completed post would look like, so DO NOT use any placeholders."
+        heading += "\n\n"
+
+        # Changing p_feature gives diversity; sometimes low number of features, sometimes high
+        p_feature = self.p_feature or random.random()
         feature_list = [
             f"- {feature}\n"
             for feature in self.all_features
-            if random.random() < self.p_feature
+            if random.random() < p_feature
         ]
 
         features = ""
@@ -159,7 +72,7 @@ class PromptGenerator:
         """Generates a prompt asking the LLM to clean up a slop post."""
         heading = "Convert this corporate LinkedIn post into plain, honest English.\n\n"
 
-        post = f"<POST>{slop_post}</POST>\n\n"
+        post = f"<POST> {slop_post} </POST>\n\n"
 
         rule_list = [
             f"- {rule}\n"
