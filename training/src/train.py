@@ -4,7 +4,7 @@ import datasets
 import evaluate
 import nltk
 import numpy as np
-from datasets import Dataset, DatasetDict
+from datasets import Dataset, DatasetDict, concatenate_datasets
 from transformers import (
     AutoModelForSeq2SeqLM,
     BartTokenizer,
@@ -23,6 +23,23 @@ def get_datasets() -> DatasetDict:
     dataset = datasets.load_dataset("json", data_files=data_files)
     assert isinstance(dataset, DatasetDict)
 
+    # Augmentations: Clean should map to clean
+    train_dataset = dataset["train"]
+    # test_dataset = dataset["test"]
+    
+    augmented_train = Dataset.from_dict({
+        "slop": train_dataset["clean"],
+        "clean": train_dataset["clean"]
+    })    
+    
+    # augmented_test = Dataset.from_dict({
+        # "slop": test_dataset["clean"],
+        # "clean": test_dataset["clean"]
+    # })
+
+    dataset["train"] = concatenate_datasets([train_dataset, augmented_train])
+    # dataset["test"] = concatenate_datasets([test_dataset, augmented_test])
+
     return dataset
 
 
@@ -36,13 +53,9 @@ def _preprocess_function(
     inputs = dataset["slop"]
     targets = dataset["clean"]
 
-    # Remove emojis to make model's life easier
+    # Remove emojis
     inputs = [remove_emojis(input) for input in inputs]
     targets = [remove_emojis(target) for target in targets]
-
-    # Clean posts should map to clean posts
-    inputs.extend(targets)
-    targets.extend(targets)
 
     model_inputs = tokenizer(inputs, max_length=max_input_length, truncation=True)
     labels = tokenizer(targets, max_length=max_target_length, truncation=True)
@@ -132,7 +145,7 @@ if __name__ == "__main__":
         
         num_train_epochs=30,
         learning_rate=5e-5,
-        weight_decay=0.005,
+        weight_decay=0.01,
         
         per_device_train_batch_size=train_batch_size,
         per_device_eval_batch_size=eval_batch_size,
