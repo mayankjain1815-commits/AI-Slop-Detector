@@ -32,6 +32,30 @@ END_SECTIONS = {
     "Further reading",
     "External links",
     "Notes",
+    "Honours",
+    "Honors",
+    "Awards and honors",
+    "Awards and recognitions",
+    "Awards and recognition",
+    "Recognition",
+    "Recognitions",
+    "Posthumous honours",
+    "Works",
+    "Selected bibliography",
+    "Select bibliography",
+    "Bibliography",
+    "Bibliography (selected)",
+    "Selected publications",
+    "Select publications",
+    "Publications",
+    "Publications (selected)",
+    "Selected articles",
+    "Select articles",
+    "Articles",
+    "Articles (selected)Selected works and publications",
+    "Select works and publications",
+    "Works and publications",
+    "Obituaries",
 }
 
 TOP_PAGES = [
@@ -59,8 +83,23 @@ def get_paragraphs(page: wiki.WikipediaPage, min_length: int = 128) -> list[str]
             break
 
         # Ignore paragraphs that are too short
-        if len(p) > min_length:
-            result.append(p)
+        if len(p) < min_length:
+            continue
+
+        # Ignore paragraphs that start with whitespace or lowercase letter
+        if p and p[0] == p[0].lower():
+            continue
+
+        # Ignore paragraphs that are likely a bullet
+        p_strip = p.strip()
+        if len(p_strip) >= 3 and "." not in p_strip[-3:]:
+            continue
+
+        # Ignore paragraphs that are likely a citation
+        if "doi:10." in p or "Bibcode:" in p or "ISBN " in p:
+            continue
+
+        result.append(p_strip)
 
     return result
 
