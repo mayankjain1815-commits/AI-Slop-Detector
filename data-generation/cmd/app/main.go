@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand/v2"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -17,20 +19,20 @@ type ScrapedDatum struct {
 }
 
 type Datum struct {
-	Idx          int
-	PageTitle    string
-	Human        string
-	AI           string
-	Summary      string
-	LastRequest  *Request
-	LastResponse *Response
+	Idx       int
+	PageTitle string
+	Human     string
+	AI        string
+	Summary   string
+	Request   *Request
+	Response  *Response
 }
 
 type Request struct {
 	Model   string
 	Prompt  string
 	Retries int
-	LastTry time.Time
+	NextTry time.Time
 }
 
 type Response struct {
@@ -51,6 +53,7 @@ type Pipeline struct {
 	cancel             context.CancelFunc
 	maxRetries         int
 	requestConcurrency int
+	models             []string
 }
 
 func NewPipeline(inputFilePath, outputFilePath string, requestConcurrency int) *Pipeline {
@@ -58,14 +61,15 @@ func NewPipeline(inputFilePath, outputFilePath string, requestConcurrency int) *
 	return &Pipeline{
 		inputFilePath:      inputFilePath,
 		outputFilePath:     outputFilePath,
-		preprompts:         make(chan Datum, 2),
-		requests:           make(chan Datum, 2),
-		responses:          make(chan Datum, 2),
-		data:               make(chan Datum, 2),
+		preprompts:         make(chan Datum, 8),
+		requests:           make(chan Datum, 8),
+		responses:          make(chan Datum, 8),
+		data:               make(chan Datum, 8),
 		ctx:                ctx,
 		cancel:             cancel,
 		maxRetries:         3,
 		requestConcurrency: requestConcurrency,
+		models:             []string{"Model A", "Model B"},
 	}
 }
 
@@ -108,15 +112,80 @@ func (p *Pipeline) readInputFile() error {
 	return scanner.Err() // nil if reaches EOF
 }
 
+func (p *Pipeline) makeRequests() {
+	for datum := range p.preprompts {
+		model := randomChoice(p.models)
+
+		var promptBuilder strings.Builder
+		if datum.Summary == "" {
+			// Generate summary prompt
+			promptBuilder.WriteString("Extract the key points from the following paragraph.")
+			promptBuilder.WriteString(
+				fmt.Sprintf(" It is from the Wikipedia article \"%s\".", datum.PageTitle),
+			)
+			promptBuilder.WriteString(" Focus on the main facts, concepts, and relationships.")
+			promptBuilder.WriteString(" Present your summary as a concise list of key points.")
+			promptBuilder.WriteString("\n\nWikipedia paragraph:\n")
+			promptBuilder.WriteString(datum.Human)
+			promptBuilder.WriteString("\n\nGive just a bullet list of the key points — do not include other text.")
+		} else if datum.AI == "" {
+			// Generate rewrite prompt
+			promptBuilder.WriteString(
+				fmt.Sprintf("You are writing a paragraph for an article on \"%s\"", datum.PageTitle),
+			)
+			promptBuilder.WriteString(" Using the key points provided below, write a cohesive paragraph in Wikipedia's encyclopedic style.")
+			promptBuilder.WriteString("\n\nRequirements:")
+			promptBuilder.WriteString("\n- Use formal, neutral, encyclopedic tone")
+			promptBuilder.WriteString("\n- Write in third person")
+			promptBuilder.WriteString("\n- Present information objectively")
+			promptBuilder.WriteString("\n- Create smooth transitions between ideas")
+			promptBuilder.WriteString("\n- Do NOT copy phrases verbatim from the key points — rephrase naturally")
+			promptBuilder.WriteString("\n- Do NOT include any markdown formatting (e.g., do NOT use *italics* and do NOT use **bold**.")
+			promptBuilder.WriteString("\n\nKey points to cover:\n")
+			promptBuilder.WriteString(datum.Summary)
+			promptBuilder.WriteString("\n\nGive just your written paragraph — do not include other text in your response.")
+		} else {
+			// Unexpected!!
+			log.Printf("Unexpected! Datum index %d with summary and AI text was passed through preprompt...\n", datum.Idx)
+			p.data <- datum
+		}
+
+		datum.Request = &Request{
+			Model:   model,
+			Prompt:  promptBuilder.String(),
+			Retries: 0,
+			NextTry: time.Now(),
+		}
+
+		p.requests <- datum
+	}
+}
+
+func randomChoice[T any](s []T) T {
+	n := len(s)
+	idx := rand.IntN(n)
+	return s[idx]
+}
+
 func main() {
 	pipeline := NewPipeline("../scrapes/scrape_1763655781666449000.jsonl", ".jsonl", 2)
 
 	go pipeline.readInputFile()
+	go pipeline.makeRequests()
+
 	go func() {
-		for datum := range pipeline.preprompts {
-			fmt.Printf("%d %s\n", datum.Idx, datum.PageTitle)
+		for datum := range pipeline.requests {
+			fmt.Println(datum.Request.Prompt)
+			fmt.Println("========")
+
+			if datum.Summary == "" {
+				datum.Summary = "<summary here>"
+				go func() {
+					pipeline.preprompts <- datum
+				}()
+			}
 		}
 	}()
 
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(20 * time.Second)
 }
