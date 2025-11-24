@@ -168,7 +168,7 @@ func randomChoice[T any](s []T) T {
 }
 
 func main() {
-	pipeline := NewPipeline("../scrapes/scrape_1763655781666449000.jsonl", ".jsonl", 2)
+	pipeline := NewPipeline("../scrapes/scrape_1763655781666449000.jsonl", ".jsonl", 20)
 
 	go pipeline.readInputFile()
 	go pipeline.makeRequests()
