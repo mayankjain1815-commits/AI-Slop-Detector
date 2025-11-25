@@ -19,7 +19,7 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "check_interval",
+        "--check-interval",
         type=float,
         default=10.0,
         help="How often to check for updates.",
