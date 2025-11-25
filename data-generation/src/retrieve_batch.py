@@ -30,3 +30,7 @@ def main():
     write_path = f"./tmp/retrieve_batch_{batch_id}"
     with open(write_path, "w") as f:
         f.write(results)
+
+
+if __name__ == "__main__":
+    main()
