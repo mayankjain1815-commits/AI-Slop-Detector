@@ -67,7 +67,6 @@ def prepare_batch_file(
                             ),
                         },
                     ],
-                    "max_tokens": 2_048,
                 },
             }
 
