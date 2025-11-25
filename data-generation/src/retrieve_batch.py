@@ -14,8 +14,6 @@ def parse_args() -> argparse.Namespace:
         help="ID of batch to retrieve.",
     )
 
-    parser.add_argument("write_path", type=str, help="Path to write result to.")
-
     return parser.parse_args()
 
 
@@ -24,11 +22,11 @@ def main():
     client = get_client()
 
     batch_id = args.batch_id
-    write_path = args.write_path
 
     batch_data = get_batch(batch_id, client)
 
     results = retrieve_results(batch_data, client)
 
+    write_path = f"./tmp/retrieve_batch_{batch_id}"
     with open(write_path, "w") as f:
         f.write(results)
