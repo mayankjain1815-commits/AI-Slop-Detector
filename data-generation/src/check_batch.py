@@ -1,25 +1,42 @@
-import time
+import argparse
 
-import openai
+from utils import (
+    await_batch,
+    get_batch,
+    get_client,
+)
 
-from utils import NEGATIVE_STATUSES, NEUTRAL_STATUSES, POSITIVE_STATUS
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Create OpenAI batch for summarization."
+    )
+
+    parser.add_argument(
+        "batch_id",
+        type=str,
+        help="ID of batch to check.",
+    )
+
+    parser.add_argument(
+        "check_interval",
+        type=float,
+        help="How often to check for updates.",
+    )
+
+    return parser.parse_args()
 
 
-def await_batch(
-    batch_data: openai.types.Batch,
-    check_interval: float,
-    client: openai.OpenAI,
-) -> openai.types.Batch | None:
-    while True:
-        batch_data = client.batches.retrieve(batch_data.id)
+def main():
+    args = parse_args()
+    client = get_client()
 
-        if batch_data.status in NEGATIVE_STATUSES:
-            print(f"[ERROR] Batch status is {batch_data.status}")
-            return None
-        elif batch_data.status in NEUTRAL_STATUSES:
-            print(f"[INFO] {batch_data.status}")
-        elif batch_data.status == POSITIVE_STATUS:
-            print("[SUCCESS] Batch completed!")
-            return batch_data
+    batch_id = args.batch_id
+    check_interval = args.check_interval
 
-        time.sleep(check_interval)
+    batch_data = get_batch(batch_id, client)
+    await_batch(batch_data, check_interval, client)
+
+
+if __name__ == "__main__":
+    main()
