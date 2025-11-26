@@ -27,12 +27,12 @@ def main():
 
     # errors
     error_file_id = batch_data.error_file_id
-    assert isinstance(error_file_id, str)
-    file_response = client.files.content(error_file_id)
+    if error_file_id is not None:
+        file_response = client.files.content(error_file_id)
 
-    write_path = f"./tmp/errors_{batch_id}.jsonl"
-    with open(write_path, "w") as f:
-        f.write(file_response.text)
+        write_path = f"./tmp/errors_{batch_id}.jsonl"
+        with open(write_path, "w") as f:
+            f.write(file_response.text)
 
     # Results
     results = retrieve_results(batch_data, client)
