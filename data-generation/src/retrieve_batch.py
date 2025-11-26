@@ -25,9 +25,19 @@ def main():
 
     batch_data = get_batch(batch_id, client)
 
+    # errors
+    error_file_id = batch_data.error_file_id
+    assert isinstance(error_file_id, str)
+    file_response = client.files.content(error_file_id)
+
+    write_path = f"./tmp/errors_{batch_id}.jsonl"
+    with open(write_path, "w") as f:
+        f.write(file_response.text)
+
+    # Results
     results = retrieve_results(batch_data, client)
 
-    write_path = f"./tmp/retrieve_batch_{batch_id}"
+    write_path = f"./tmp/retrievals_{batch_id}.jsonl"
     with open(write_path, "w") as f:
         f.write(results)
 
