@@ -34,18 +34,26 @@ def get_client() -> openai.OpenAI:
 
 def prepare_batch_file(
     input_path: str,
-    output_path: str,
+    output_path_base: str,
     get_system_prompt: Callable[[], str],
     get_user_prompt: Callable[Concatenate[dict[str, Any], P], str],
     model: str,
     max_lines: int | None = None,
+    split_file_count: int = 1,
     *user_prompt_args: P.args,
     **user_prompt_kwargs: P.kwargs,
-) -> None:
-    with (
-        open(input_path, "r", encoding="utf-8") as fin,
-        open(output_path, "w", encoding="utf-8") as fout,
-    ):
+) -> set[str]:
+    # Get number of lines
+    n_lines = 0
+    with open(input_path, "r", encoding="utf-8") as f:
+        for line in f:
+            n_lines += 1
+
+    lines_per_split = n_lines // split_file_count
+
+    # Write to output files
+    used_outputs = set()
+    with open(input_path, "r", encoding="utf-8") as fin:
         for idx, line in enumerate(fin):
             if max_lines and idx + 1 > max_lines:
                 break
@@ -70,8 +78,21 @@ def prepare_batch_file(
                 },
             }
 
-            fout.write(json.dumps(request, ensure_ascii=False))
-            fout.write("\n")
+            if split_file_count == 1:
+                output_path = output_path_base
+            else:
+                path_split = output_path_base.split(".")
+                output_path = (
+                    ".".join(path_split[:-1])
+                    + f"_{idx // lines_per_split}."
+                    + path_split[-1]
+                )
+            used_outputs.add(output_path)
+            with open(output_path, "a", encoding="utf-8") as fout:
+                fout.write(json.dumps(request, ensure_ascii=False))
+                fout.write("\n")
+
+    return used_outputs
 
 
 def upload_batch_file(

@@ -5,10 +5,10 @@ from typing import Any
 
 from utils import (
     DEFAULT_MODEL,
-    create_batch,
-    get_client,
+    # create_batch,
+    # get_client,
     prepare_batch_file,
-    upload_batch_file,
+    # upload_batch_file,
 )
 
 
@@ -82,7 +82,7 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     args = parse_args()
-    client = get_client()
+    # client = get_client()
 
     scrape_file_path: str = args.scrape_file_path
     summaries_file_path: str = args.summaries_file_path
@@ -93,18 +93,22 @@ def main():
 
     page_titles = get_page_titles(scrape_file_path)
 
-    prepare_batch_file(
+    output_files = prepare_batch_file(
         summaries_file_path,
         batch_file_path,
         get_rewrite_system_prompt,
         get_rewrite_user_prompt,
         model,
         None,
+        2,
         page_titles,
     )
 
-    batch_file = upload_batch_file(batch_file_path, client)
-    _ = create_batch(batch_file, task, client)
+    for file_path in output_files:
+        print(f"[INFO] Created batch file {file_path}")
+
+    # batch_file = upload_batch_file(batch_file_path, client)
+    # _ = create_batch(batch_file, task, client)
 
 
 if __name__ == "__main__":
