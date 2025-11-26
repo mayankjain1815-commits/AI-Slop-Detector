@@ -118,6 +118,22 @@ def await_batch(
         while True:
             batch_data = get_batch(batch_data.id, client)
 
+            if batch_data.usage:
+                input_tokens = batch_data.usage.input_tokens
+                input_cached = batch_data.usage.input_tokens_details.cached_tokens
+                output_tokens = batch_data.usage.output_tokens
+                print(
+                    f"[INFO] Usage: {input_tokens} input tokens ({input_cached} cached), {output_tokens} output tokens"
+                )
+
+            if batch_data.request_counts:
+                completed = batch_data.request_counts.completed
+                failed = batch_data.request_counts.failed
+                total = batch_data.request_counts.total
+                print(
+                    f"[INFO] Request counts: {completed} of {total} completed, ({failed} failed)"
+                )
+
             if batch_data.status in NEGATIVE_STATUSES:
                 print(f"[ERROR] Batch status is {batch_data.status}")
                 return None
@@ -126,14 +142,6 @@ def await_batch(
             elif batch_data.status == POSITIVE_STATUS:
                 print("[SUCCESS] Batch completed!")
                 return batch_data
-
-            if batch_data.usage:
-                input_tokens = batch_data.usage.input_tokens
-                input_cached = batch_data.usage.input_tokens_details.cached_tokens
-                output_tokens = batch_data.usage.output_tokens
-                print(
-                    f"[INFO] Usage: {input_tokens} input tokens ({input_cached} cached), {output_tokens} output tokens"
-                )
 
             time.sleep(check_interval)
     except KeyboardInterrupt:
