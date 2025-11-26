@@ -1,4 +1,5 @@
 import argparse
+import json
 from functools import cache
 from typing import Any
 
@@ -29,16 +30,27 @@ def get_rewrite_system_prompt() -> str:
     return prompt
 
 
-def get_article_titles(scrape_file_path: str) -> list[str]:
-    raise NotImplementedError
+def get_page_titles(scrape_file_path: str) -> list[str]:
+    titles = []
+
+    with open(scrape_file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            datum: dict[str, str] = json.loads(line)
+            titles.append(datum["page_title"])
+
+    return titles
 
 
-def get_rewrite_user_prompt(datum: dict[str, Any], article_titles: list[str]) -> str:
-    raise NotImplementedError
-    # prompt = f'Article title: "{datum["page_title"]}".\n\n'
-    # prompt += f"Key points:\n{datum['text']}"
+def get_rewrite_user_prompt(datum: dict[str, Any], page_titles: list[str]) -> str:
+    idx = int(datum["custom_id"])
+    key_points = datum["response"]["body"]["choices"][0]["message"]["content"]
 
-    # return prompt
+    page_title = page_titles[idx]
+
+    prompt = f'Article title: "{page_title}".\n\n'
+    prompt += f"Key points:\n{key_points}"
+
+    return prompt
 
 
 def parse_args() -> argparse.Namespace:
@@ -79,7 +91,7 @@ def main():
 
     batch_file_path = f"./tmp/{task}_{model}.jsonl"
 
-    article_titles = get_article_titles(scrape_file_path)
+    page_titles = get_page_titles(scrape_file_path)
 
     prepare_batch_file(
         summaries_file_path,
@@ -88,7 +100,7 @@ def main():
         get_rewrite_user_prompt,
         model,
         None,
-        article_titles,
+        page_titles,
     )
 
     batch_file = upload_batch_file(batch_file_path, client)
