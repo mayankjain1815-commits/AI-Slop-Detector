@@ -1,44 +1,43 @@
 from functools import partial
 
 import datasets
-import evaluate
-import nltk
-import numpy as np
 from datasets import Dataset, DatasetDict, concatenate_datasets
+import evaluate
+import numpy as np
+import torch
 from transformers import (
-    AutoModelForSeq2SeqLM,
+    AutoModelForSequenceClassification,
     BartTokenizer,
     BatchEncoding,
-    DataCollatorForSeq2Seq,
-    Seq2SeqTrainer,
-    Seq2SeqTrainingArguments,
+    DataCollatorWithPadding,
+    Trainer,
+    TrainingArguments,
 )
 
-from utils import remove_emojis
 
 
 def get_datasets() -> DatasetDict:
-    data_files = {"train": "../data/train/*.jsonl", "test": "../data/test/*.jsonl"}
+    data_file = "../data/wikipedia.jsonl"
 
-    dataset = datasets.load_dataset("json", data_files=data_files)
+    dataset = datasets.load_dataset("json", data_files=data_file)
     assert isinstance(dataset, DatasetDict)
 
-    # Augmentations: Clean should map to clean
-    train_dataset = dataset["train"]
-    # test_dataset = dataset["test"]
+    full_dataset = dataset["train"]
     
-    augmented_train = Dataset.from_dict({
-        "slop": train_dataset["clean"],
-        "clean": train_dataset["clean"]
-    })    
-    
-    # augmented_test = Dataset.from_dict({
-        # "slop": test_dataset["clean"],
-        # "clean": test_dataset["clean"]
-    # })
+    human_examples = Dataset.from_dict({
+        "text": full_dataset["human_text"],
+        "label": [0] * len(full_dataset),
+    })
 
-    dataset["train"] = concatenate_datasets([train_dataset, augmented_train])
-    # dataset["test"] = concatenate_datasets([test_dataset, augmented_test])
+    ai_examples = Dataset.from_dict({
+        "text": full_dataset["ai_text"],
+        "label": [1] * len(full_dataset),
+    })
+
+    combined_dataset = concatenate_datasets([human_examples, ai_examples])
+    combined_dataset = combined_dataset.shuffle(seed=42)
+
+    dataset = combined_dataset.train_test_split(test_size=0.05, seed=42)
 
     return dataset
 
@@ -46,104 +45,72 @@ def get_datasets() -> DatasetDict:
 def _preprocess_function(
     dataset: Dataset | dict,
     tokenizer: BartTokenizer,
-    max_input_length: int = 1024,
-    max_target_length: int = 1024,
+    max_length: int = 2048,
 ) -> BatchEncoding:
-    """Preprocess the dataset for BART conditional generation."""
-    inputs = dataset["slop"]
-    targets = dataset["clean"]
+    texts = dataset["text"]
+    model_inputs = tokenizer(texts, max_length=max_length, truncation=True)
 
-    # Remove emojis
-    inputs = [remove_emojis(input) for input in inputs]
-    targets = [remove_emojis(target) for target in targets]
+    model_inputs["label"] = dataset["label"]
 
-    model_inputs = tokenizer(inputs, max_length=max_input_length, truncation=True)
-    labels = tokenizer(targets, max_length=max_target_length, truncation=True)
-
-    model_inputs["labels"] = labels["input_ids"]
     return model_inputs
 
 
 def _compute_metrics(
     eval_pred: tuple[np.ndarray, np.ndarray],
-    tokenizer: BartTokenizer,
-    metric: evaluate.EvaluationModule,
+    metric_accuracy: evaluate.EvaluationModule,
+    metric_f1: evaluate.EvaluationModule,
 ) -> dict[str, float]:
     predictions, labels = eval_pred
+    predictions = predictions[0]
 
-    assert isinstance(tokenizer.pad_token_id, int)
-    predictions = np.where(predictions != -100, predictions, tokenizer.pad_token_id)
-    decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+    predictions = np.argmax(predictions, axis=1)
 
-    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+    accuracy = metric_accuracy.compute(predictions=predictions, references=labels)
+    f1 = metric_f1.compute(predictions=predictions, references=labels)
 
-    # Compute generation lengths
-    gen_lengths = [
-        len(tokenizer.encode(pred, add_special_tokens=False)) for pred in decoded_preds
-    ]
-    length_min = np.min(gen_lengths) if gen_lengths else 0
-    length_median = np.median(gen_lengths) if gen_lengths else 0
-    length_max = np.max(gen_lengths) if gen_lengths else 0
+    assert accuracy is not None and f1 is not None
 
-    # Format for ROUGE
-    decoded_preds = [
-        "\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds
-    ]
-    decoded_labels = [
-        "\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels
-    ]
+    result = {
+        "accuracy": accuracy["accuracy"],
+        "f1": f1["f1"],
+    }
 
-    result = metric.compute(
-        predictions=decoded_preds,
-        references=decoded_labels,
-        use_stemmer=True,
-        use_aggregator=True,
-    )
-    assert result is not None
-
-    result.update(
-        {
-            "gen_length_min": length_min,
-            "gen_length_median": length_median,
-            "gen_length_max": length_max,
-            "sample_pred": decoded_preds[0] if decoded_preds else None,
-        }
-    )
+    # Clear cache: Improves training speed after evaluations!
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     return result
 
 
-if __name__ == "__main__":
-    try:
-        nltk.data.find("tokenizers/punkt_tab")
-    except:
-        nltk.download("punkt_tab")
 
+if __name__ == "__main__":
     raw_datasets = get_datasets()
 
     checkpoint = "facebook/bart-base"
     tokenizer = BartTokenizer.from_pretrained(checkpoint)
-    model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint)
 
-    model.generation_config.early_stopping = True
-    model.generation_config.num_beams = 2
-    model.generation_config.no_repeat_ngram_size = 3
-    model.generation_config.forced_bos_token_id = 0
+    model = AutoModelForSequenceClassification.from_pretrained(
+        checkpoint,
+        num_labels=2,
+    ).to(device='cuda')
 
-    metric = evaluate.load("rouge")
+    if hasattr(model, 'generation_config'):
+        model.generation_config = None
+
+    metric_accuracy = evaluate.load("accuracy")
+    metric_f1 = evaluate.load("f1")
 
     preprocess_function = partial(_preprocess_function, tokenizer=tokenizer)
     tokenized_datasets = raw_datasets.map(preprocess_function, batched=True)
 
-    train_batch_size = 2
-    gradient_accumulation_steps = 16
+    train_batch_size = 4
+    gradient_accumulation_steps = 8
     eval_batch_size = 4
 
-    training_args = Seq2SeqTrainingArguments(
-        "../models/bart-base-finetuned",
+    training_args = TrainingArguments(
+        "../models/bart-base-classifier",
         
-        num_train_epochs=30,
+        num_train_epochs=5,
         learning_rate=5e-5,
         weight_decay=0.01,
         
@@ -153,28 +120,26 @@ if __name__ == "__main__":
         fp16=True,
         
         save_strategy="steps",
-        save_total_limit=5,
+        save_total_limit=16,
         save_steps=128,
-        metric_for_best_model="eval_loss",
+        metric_for_best_model="eval_accuracy",
         load_best_model_at_end=True,
         
         eval_strategy="steps",
         eval_steps=128,
-        predict_with_generate=True,
-        generation_max_length=512,
         
         logging_strategy="steps",
-        logging_steps=64,
+        logging_steps=32,
     )
 
-    data_collator = DataCollatorForSeq2Seq(tokenizer, model)
+    data_collator = DataCollatorWithPadding(tokenizer)
 
-    compute_metrics = partial(_compute_metrics, tokenizer=tokenizer, metric=metric)
-    trainer = Seq2SeqTrainer(
+    compute_metrics = partial(_compute_metrics, metric_accuracy=metric_accuracy, metric_f1=metric_f1)
+    trainer = Trainer(
         model,
         training_args,
         train_dataset=tokenized_datasets["train"],
-        eval_dataset=tokenized_datasets["test"],  # type: ignore
+        eval_dataset=tokenized_datasets["test"],
         data_collator=data_collator,
         compute_metrics=compute_metrics,  # type: ignore
     )
