@@ -24,20 +24,20 @@ def get_datasets() -> DatasetDict:
     assert isinstance(dataset, DatasetDict)
 
     # Augmentations: Clean should map to clean
-    train_dataset = dataset["train"]
+    # train_dataset = dataset["train"]
     # test_dataset = dataset["test"]
     
-    augmented_train = Dataset.from_dict({
-        "slop": train_dataset["clean"],
-        "clean": train_dataset["clean"]
-    })    
+    # augmented_train = Dataset.from_dict({
+        # "slop": train_dataset["clean"],
+        # "clean": train_dataset["clean"]
+    # })    
     
     # augmented_test = Dataset.from_dict({
         # "slop": test_dataset["clean"],
         # "clean": test_dataset["clean"]
     # })
 
-    dataset["train"] = concatenate_datasets([train_dataset, augmented_train])
+    # dataset["train"] = concatenate_datasets([train_dataset, augmented_train])
     # dataset["test"] = concatenate_datasets([test_dataset, augmented_test])
 
     return dataset
@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     checkpoint = "facebook/bart-base"
     tokenizer = BartTokenizer.from_pretrained(checkpoint)
-    model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint)
+    model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint).to("cuda")
 
     model.generation_config.early_stopping = True
     model.generation_config.num_beams = 2
