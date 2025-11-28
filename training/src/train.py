@@ -13,7 +13,9 @@ from transformers import (
     DataCollatorWithPadding,
     Trainer,
     TrainingArguments,
+    PreTrainedModel
 )
+from peft import LoraConfig, get_peft_model
 
 
 def get_datasets() -> DatasetDict:
@@ -77,10 +79,6 @@ def _compute_metrics(
         "f1": f1["f1"],
     }
 
-    # Clear cache: Improves training speed after evaluations!
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-
     return result
 
 
@@ -95,8 +93,18 @@ if __name__ == "__main__":
         num_labels=2,
     ).to(device='cuda')
 
-    if hasattr(model, 'generation_config'):
-        model.generation_config = None
+    peft_config = LoraConfig(
+        r=8,
+        target_modules="all-linear",
+        lora_alpha=16,
+        bias="none",
+        lora_dropout=0.05,
+        use_rslora=True,
+        modules_to_save=["classifier"],
+    )
+    
+    model = get_peft_model(model, peft_config)
+    model.print_trainable_parameters()
 
     metric_accuracy = evaluate.load("accuracy")
     metric_f1 = evaluate.load("f1")
@@ -109,10 +117,10 @@ if __name__ == "__main__":
     eval_batch_size = 4
 
     training_args = TrainingArguments(
-        "../models/bert-base-classifier",
+        "../models/bert-base-classifier-peft",
         
         num_train_epochs=5,
-        learning_rate=2.5e-5,
+        learning_rate=1e-4,
         weight_decay=0.1,
         
         per_device_train_batch_size=train_batch_size,
