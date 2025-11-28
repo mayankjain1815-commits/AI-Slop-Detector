@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from transformers import (
     AutoModelForSequenceClassification,
-    BartTokenizer,
+    BertTokenizer,
     BatchEncoding,
     DataCollatorWithPadding,
     Trainer,
@@ -44,7 +44,7 @@ def get_datasets() -> DatasetDict:
 
 def _preprocess_function(
     dataset: Dataset | dict,
-    tokenizer: BartTokenizer,
+    tokenizer: BertTokenizer,
     max_length: int = 2048,
 ) -> BatchEncoding:
     texts = dataset["text"]
@@ -86,8 +86,8 @@ def _compute_metrics(
 if __name__ == "__main__":
     raw_datasets = get_datasets()
 
-    checkpoint = "facebook/bart-base"
-    tokenizer = BartTokenizer.from_pretrained(checkpoint)
+    checkpoint = "bert-base-cased"
+    tokenizer = BertTokenizer.from_pretrained(checkpoint)
 
     model = AutoModelForSequenceClassification.from_pretrained(
         checkpoint,
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     eval_batch_size = 4
 
     training_args = TrainingArguments(
-        "../models/bart-base-classifier",
+        "../models/bert-base-classifier",
         
         num_train_epochs=5,
         learning_rate=5e-5,
