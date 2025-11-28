@@ -1,9 +1,12 @@
 [project]
-name = "data-generation"
+name = "scraping"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11.4"
 dependencies = [
-    "openai>=2.8.1",
+    "wikipedia-api>=0.8.1",
 ]
+
+[tool.ruff]
+target-version = "py312"
