@@ -1,5 +1,3 @@
-# from transformers import BartTokenizer, BartForSequenceClassification, Trainer, TrainingArguments
-# from transformers import BertTokenizer, BertForSequenceClassification
 from transformers import PreTrainedTokenizer, AutoTokenizer
 from datasets import Dataset, DatasetDict
 import numpy as np
@@ -13,7 +11,7 @@ def analyze_token_lengths(
     def tokenize_and_get_length(examples: Dataset) -> dict[str, list[int]]:
         """Tokenize texts and return their lengths."""
         tokenized = tokenizer(examples["text"], truncation=False, padding=False)
-        return {"token_length": [len(ids) for ids in tokenized["input_ids"]]}
+        return {"token_length": [len(ids) for ids in tokenized["input_ids"]]}  # type: ignore
     
     # Add token lengths to the dataset
     dataset_with_lengths = dataset.map(
