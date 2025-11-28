@@ -7,13 +7,13 @@ import numpy as np
 import torch
 from transformers import (
     AutoModelForSequenceClassification,
-    BertTokenizer,
+    AutoTokenizer,
+    PreTrainedTokenizer,
     BatchEncoding,
     DataCollatorWithPadding,
     Trainer,
     TrainingArguments,
 )
-
 
 
 def get_datasets() -> DatasetDict:
@@ -44,8 +44,8 @@ def get_datasets() -> DatasetDict:
 
 def _preprocess_function(
     dataset: Dataset | dict,
-    tokenizer: BertTokenizer,
-    max_length: int = 2048,
+    tokenizer: PreTrainedTokenizer,
+    max_length: int = 512,
 ) -> BatchEncoding:
     texts = dataset["text"]
     model_inputs = tokenizer(texts, max_length=max_length, truncation=True)
@@ -61,7 +61,9 @@ def _compute_metrics(
     metric_f1: evaluate.EvaluationModule,
 ) -> dict[str, float]:
     predictions, labels = eval_pred
-    predictions = predictions[0]
+
+    if isinstance(predictions, tuple):
+        predictions = predictions[0]
 
     predictions = np.argmax(predictions, axis=1)
 
@@ -82,13 +84,12 @@ def _compute_metrics(
     return result
 
 
-
 if __name__ == "__main__":
     raw_datasets = get_datasets()
 
     checkpoint = "bert-base-cased"
-    tokenizer = BertTokenizer.from_pretrained(checkpoint)
 
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
     model = AutoModelForSequenceClassification.from_pretrained(
         checkpoint,
         num_labels=2,
@@ -111,8 +112,8 @@ if __name__ == "__main__":
         "../models/bert-base-classifier",
         
         num_train_epochs=5,
-        learning_rate=5e-5,
-        weight_decay=0.01,
+        learning_rate=2.5e-5,
+        weight_decay=0.1,
         
         per_device_train_batch_size=train_batch_size,
         per_device_eval_batch_size=eval_batch_size,
@@ -120,7 +121,7 @@ if __name__ == "__main__":
         fp16=True,
         
         save_strategy="steps",
-        save_total_limit=16,
+        save_total_limit=2,
         save_steps=128,
         metric_for_best_model="eval_accuracy",
         load_best_model_at_end=True,
