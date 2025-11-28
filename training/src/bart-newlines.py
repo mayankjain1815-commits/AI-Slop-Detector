@@ -1,22 +1,79 @@
-from transformers import BartTokenizer, BartForConditionalGeneration, Trainer, TrainingArguments
-from transformers import T5Tokenizer, T5ForConditionalGeneration
-from datasets import Dataset
+# from transformers import BartTokenizer, BartForSequenceClassification, Trainer, TrainingArguments
+# from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import PreTrainedTokenizer, AutoTokenizer
+from datasets import Dataset, DatasetDict
+import numpy as np
 
-MODEL = 0
+from train import get_datasets
 
-if MODEL == 0:
-    print("Using Bart!\n")
-    tokenizer = BartTokenizer.from_pretrained("facebook/bart-base")
-    model = BartForConditionalGeneration.from_pretrained("facebook/bart-base")
-elif MODEL == 1:
-    print("Using t5!\n")
-    tokenizer = T5Tokenizer.from_pretrained("t5-base")
-    model = T5ForConditionalGeneration.from_pretrained("t5-base")
-else:
-    quit()
+def analyze_token_lengths(
+    dataset: DatasetDict,
+    tokenizer: PreTrainedTokenizer
+):
+    def tokenize_and_get_length(examples: Dataset) -> dict[str, list[int]]:
+        """Tokenize texts and return their lengths."""
+        tokenized = tokenizer(examples["text"], truncation=False, padding=False)
+        return {"token_length": [len(ids) for ids in tokenized["input_ids"]]}
+    
+    # Add token lengths to the dataset
+    dataset_with_lengths = dataset.map(
+        tokenize_and_get_length,
+        batched=True,
+        desc="Tokenizing and computing lengths"
+    )
+    
+    # Compute statistics for each split
+    stats = {}
+    for split_name in dataset_with_lengths.keys():
+        lengths = dataset_with_lengths[split_name]["token_length"]
+        lengths = np.array(lengths)
+        
+        stats[split_name] = {
+            "count": len(lengths),
+            "min": int(np.min(lengths)),
+            "max": int(np.max(lengths)),
+            "mean": float(np.mean(lengths)),
+            "median": float(np.median(lengths)),
+            "q95": float(np.percentile(lengths, 95)),
+            "q99": float(np.percentile(lengths, 99)),
+            "num_above_512": np.sum(lengths > 512),
+            "num_above_1024": np.sum(lengths > 1024),
+        }
+    
+    return stats, dataset_with_lengths
 
-assert isinstance(tokenizer.pad_token_id, int)
-print(tokenizer.pad_token_id)
+if __name__ == '__main__':
+    # MODEL = 0
+
+    # if MODEL == 0:
+    #     print("Using Bart!\n")
+    #     checkpoint = "facebook/bart-base"
+    #     tokenizer = BartTokenizer.from_pretrained(checkpoint)
+    #     # model = BartForSequenceClassification.from_pretrained(checkpoint, num_labels=2)
+    # elif MODEL == 1:
+    #     print("Using Bert!\n")
+    #     checkpoint = "bert-base-cased"
+    #     tokenizer = BertTokenizer.from_pretrained(checkpoint)
+    #     # model = BertForSequenceClassification.from_pretrained(checkpoint, num_labels=2)
+    # else:
+    #     quit()
+
+    raw_datasets = get_datasets()
+
+    checkpoints = ["facebook/bart-base", "bert-base-cased"]
+
+    for checkpoint in checkpoints:
+        tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+
+        stats, _ = analyze_token_lengths(raw_datasets, tokenizer)
+        for split_name, split_stats in stats.items():
+            print(split_name)
+            print("="*len(split_name))
+            for stat, value in split_stats.items():
+                print(f"{stat}: {value}")
+            print("")
+
+
 
 # train_data = {
 #     "input": [
