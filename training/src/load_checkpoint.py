@@ -1,93 +1,46 @@
 from transformers import (
-    AutoModelForSeq2SeqLM,
-    BartTokenizer,
-    BatchEncoding,
-    DataCollatorForSeq2Seq,
-    Seq2SeqTrainer,
-    Seq2SeqTrainingArguments,
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
 )
 import torch
 
-from utils import remove_emojis
-
-POST = """
-🔍 Generative AI is not neutral.
-It is WEIRD — Western, Educated, Industrialized, Rich, Democratic.
-
-This is the profile that dominates the data, the teams and the epistemic frameworks shaping much of today’s Artificial Intelligence — the same AI that increasingly governs public and private decision-making.
-
-In other words:
-AI is ethnocoded.
-Models that “learn” about the world, but only from the world as experienced by Global North elites. Systems that reproduce — at speed and scale — the racial, class, gender and territorial biases already embedded in our societies.
-
-For those of us working in human rights, on the rights of Afro-descendant and Indigenous peoples, on the rights of migrants and asylum seekers, and on intersectional discrimination and gender inequality, this is not a technical anecdote:
-➡️ it is a matter of algorithmic justice.
-
-Because when algorithms cannot “see” certain bodies, they erase them.
-When they cannot recognize certain territories, they subordinate them.
-When they fail to understand certain accents, languages or cultural patterns, they penalize the people who embody them.
-
-So the question is not only “How do we reduce bias?” but:
-✨ Who designs this technology? From which worldview? And with what consequences for those who were never part of the dominant “we”?
-
-Algorithmic justice requires:
-✔️ Diversifying teams and datasets beyond the WEIRD model.
-✔️ Designing technology with real participation from racialized and marginalized communities.
-✔️ Embedding decolonial and intersectional perspectives across the entire tech cycle.
-✔️ Demanding transparency, audits and democratic accountability.
-
-AI can expand rights — or deepen inequalities.
-It depends on whether we continue accepting ethnocoded technology…
-…or whether we choose to build systems that reflect the full plurality of the world we actually live in.
-
-This conversation is not optional.
-It is urgent.
-
-Look at the image and ask yourself:
-How close is your own worldview to the way ChatGPT “thinks”?
-
-
-(text by Diego Battistessa , Social Change School advisor)
-
-hashtag#AI hashtag#AlgorithmicJustice hashtag#Etnocoding hashtag#HumanRights hashtag#WEIRD hashtag#Bias
-""".strip()
-
-POST = remove_emojis(POST)
+ORIGINAL = "Born in Bristol and raised in Glastonbury to an English father and Belgian mother, Norris began competitive kart racing aged eight. After a successful karting career, which culminated in his victory at the direct-drive World Championship in 2014, Norris graduated to junior formulae. He won his first title at the 2015 MSA Formula Championship with Carlin. He then won the Toyota Racing Series, Formula Renault Eurocup, and Formula Renault NEC in 2016, receiving the Autosport BRDC Award that year. Norris won the FIA Formula 3 European Championship in 2017, and finished runner-up to George Russell in the FIA Formula 2 Championship in 2018, both with Carlin."
+CHAT_GPT = "Born in Bristol and raised in Glastonbury to an English father and a Belgian mother, Norris began competing in karting at the age of eight. He enjoyed a successful karting career, culminating in his victory at the direct-drive World Championship in 2014, before progressing into the junior single-seater categories. Norris claimed his first car-racing title in the 2015 MSA Formula Championship with Carlin. The following year, he secured championships in the Toyota Racing Series, the Formula Renault Eurocup, and Formula Renault NEC, and was awarded the Autosport BRDC Award. In 2017, Norris won the FIA Formula 3 European Championship, and in 2018 he finished runner-up to George Russell in the FIA Formula 2 Championship, again racing with Carlin."
+GEMINI = "Born in Bristol and raised in Glastonbury by an English father and Belgian mother, Norris began competitive karting at the age of eight. His karting career culminated in a victory at the 2014 World Championship, after which he graduated to junior formulae. Norris secured his first single-seater title in 2015 at the MSA Formula Championship driving for Carlin. The following year, he won the Toyota Racing Series, Formula Renault Eurocup, and Formula Renault NEC, a performance that earned him the Autosport BRDC Award. Continuing with Carlin, Norris claimed the 2017 FIA Formula 3 European Championship and finished as runner-up to George Russell in the 2018 FIA Formula 2 Championship."
+CLAUDE = "Born in Bristol and raised in Glastonbury to an English father and Belgian mother, Norris began competitive kart racing at the age of eight. His successful karting career culminated in victory at the direct-drive World Championship in 2014, after which he graduated to junior formulae. Norris won his first title at the 2015 MSA Formula Championship with Carlin, then swept the 2016 season by winning the Toyota Racing Series, Formula Renault Eurocup, and Formula Renault NEC, earning him the Autosport BRDC Award that year. He continued his ascent by winning the FIA Formula 3 European Championship in 2017 and finishing runner-up to George Russell in the 2018 FIA Formula 2 Championship, both with Carlin."
 
 if __name__ == '__main__':
-    checkpoint = "../models/bart-base-finetuned/with-aug-checkpoint-1920"
-    tokenizer = BartTokenizer.from_pretrained(checkpoint)
-    model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint).to("cuda")
+    checkpoint = "../models/bert-base-classifier-peft/best-acc-checkpoint-2304"
 
-    test_examples = [
-        POST
-    ]
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+    model = AutoModelForSequenceClassification.from_pretrained(
+        checkpoint,
+        id2label = {0: "HUMAN", 1: "AI"}
+    ).to('cuda')
+
+    test_examples = {
+        "Original": ORIGINAL,
+        "ChatGPT": CHAT_GPT,
+        "Gemini": GEMINI,
+        "Claude": CLAUDE,
+    }
 
     model.eval()
 
     device = model.device
     print(f"\nModel is on device: {device}\n")
 
-    for i, test_text in enumerate(test_examples, 1):
-        inputs = tokenizer(test_text, return_tensors="pt", max_length=2048, truncation=True)
+    for text_source, test_text in test_examples.items():
+        inputs = tokenizer(test_text, return_tensors="pt", max_length=512, truncation=True)
         inputs = {k: v.to(device) for k, v in inputs.items()}
 
         decoded_input = tokenizer.decode(inputs["input_ids"][0], skip_special_tokens=True)
 
-        print(f"{'='*60}")
-        print(f"Input:")
-        print(decoded_input)
-        
-        outputs = model.generate(
-            inputs["input_ids"],
-            max_length=2048,
-            num_beams=4,
-            early_stopping=True,
-            no_repeat_ngram_size=2,
-        )
+        with torch.no_grad():
+            logits = model(**inputs).logits
 
-        generated = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        
-        print(f"{'='*60}")
-        print(f"Generated:")
-        print(generated)
+        predicted_class_id = logits.argmax().item()
+        predicted_label = model.config.id2label[predicted_class_id]
+        certainty = 100.0 * torch.softmax(logits, dim=-1)[0, predicted_class_id]
+
+        print(f"{text_source}: {predicted_label} ({certainty:.2f}%)")

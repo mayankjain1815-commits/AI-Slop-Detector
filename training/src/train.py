@@ -7,13 +7,15 @@ import numpy as np
 import torch
 from transformers import (
     AutoModelForSequenceClassification,
-    BertTokenizer,
+    AutoTokenizer,
+    PreTrainedTokenizer,
     BatchEncoding,
     DataCollatorWithPadding,
     Trainer,
     TrainingArguments,
+    PreTrainedModel
 )
-
+from peft import LoraConfig, get_peft_model
 
 
 def get_datasets() -> DatasetDict:
@@ -44,8 +46,8 @@ def get_datasets() -> DatasetDict:
 
 def _preprocess_function(
     dataset: Dataset | dict,
-    tokenizer: BertTokenizer,
-    max_length: int = 2048,
+    tokenizer: PreTrainedTokenizer,
+    max_length: int = 512,
 ) -> BatchEncoding:
     texts = dataset["text"]
     model_inputs = tokenizer(texts, max_length=max_length, truncation=True)
@@ -61,7 +63,9 @@ def _compute_metrics(
     metric_f1: evaluate.EvaluationModule,
 ) -> dict[str, float]:
     predictions, labels = eval_pred
-    predictions = predictions[0]
+
+    if isinstance(predictions, tuple):
+        predictions = predictions[0]
 
     predictions = np.argmax(predictions, axis=1)
 
@@ -75,27 +79,32 @@ def _compute_metrics(
         "f1": f1["f1"],
     }
 
-    # Clear cache: Improves training speed after evaluations!
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-
     return result
-
 
 
 if __name__ == "__main__":
     raw_datasets = get_datasets()
 
     checkpoint = "bert-base-cased"
-    tokenizer = BertTokenizer.from_pretrained(checkpoint)
 
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
     model = AutoModelForSequenceClassification.from_pretrained(
         checkpoint,
         num_labels=2,
     ).to(device='cuda')
 
-    if hasattr(model, 'generation_config'):
-        model.generation_config = None
+    peft_config = LoraConfig(
+        r=16,
+        target_modules="all-linear",
+        lora_alpha=16,
+        bias="none",
+        lora_dropout=0.05,
+        use_rslora=True,
+        modules_to_save=["classifier"],
+    )
+    
+    model = get_peft_model(model, peft_config)
+    model.print_trainable_parameters()
 
     metric_accuracy = evaluate.load("accuracy")
     metric_f1 = evaluate.load("f1")
@@ -108,11 +117,11 @@ if __name__ == "__main__":
     eval_batch_size = 4
 
     training_args = TrainingArguments(
-        "../models/bert-base-classifier",
+        "../models/bert-base-classifier-peft",
         
         num_train_epochs=5,
         learning_rate=5e-5,
-        weight_decay=0.01,
+        weight_decay=0.1,
         
         per_device_train_batch_size=train_batch_size,
         per_device_eval_batch_size=eval_batch_size,
@@ -120,16 +129,16 @@ if __name__ == "__main__":
         fp16=True,
         
         save_strategy="steps",
-        save_total_limit=16,
-        save_steps=128,
+        save_total_limit=2,
+        save_steps=64,
         metric_for_best_model="eval_accuracy",
         load_best_model_at_end=True,
         
         eval_strategy="steps",
-        eval_steps=128,
+        eval_steps=64,
         
         logging_strategy="steps",
-        logging_steps=32,
+        logging_steps=16,
     )
 
     data_collator = DataCollatorWithPadding(tokenizer)
@@ -145,3 +154,4 @@ if __name__ == "__main__":
     )
 
     trainer.train()
+    trainer.evaluate()
