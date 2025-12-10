@@ -94,7 +94,7 @@ if __name__ == "__main__":
     ).to(device='cuda')
 
     peft_config = LoraConfig(
-        r=8,
+        r=16,
         target_modules="all-linear",
         lora_alpha=16,
         bias="none",
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         "../models/bert-base-classifier-peft",
         
         num_train_epochs=5,
-        learning_rate=1e-4,
+        learning_rate=5e-5,
         weight_decay=0.1,
         
         per_device_train_batch_size=train_batch_size,
@@ -130,15 +130,15 @@ if __name__ == "__main__":
         
         save_strategy="steps",
         save_total_limit=2,
-        save_steps=128,
+        save_steps=64,
         metric_for_best_model="eval_accuracy",
         load_best_model_at_end=True,
         
         eval_strategy="steps",
-        eval_steps=128,
+        eval_steps=64,
         
         logging_strategy="steps",
-        logging_steps=32,
+        logging_steps=16,
     )
 
     data_collator = DataCollatorWithPadding(tokenizer)
@@ -154,3 +154,4 @@ if __name__ == "__main__":
     )
 
     trainer.train()
+    trainer.evaluate()
