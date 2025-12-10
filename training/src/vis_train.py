@@ -1,7 +1,7 @@
 import json
 import matplotlib.pyplot as plt
 
-checkpoint = "../models/bert-base-classifier/checkpoint-2960"
+checkpoint = "../models/bert-base-classifier-peft/best-acc-checkpoint-2304"
 
 with open(f"{checkpoint}/trainer_state.json", "r") as file:
     trainer_state = json.load(file)
