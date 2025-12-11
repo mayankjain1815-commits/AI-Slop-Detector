@@ -50,6 +50,8 @@ def run_inference(text: str, model: PeftModel, tokenizer: PreTrainedTokenizer) -
     paragraphs = text.split('\n')
     paragraphs = [p.strip() for p in paragraphs if len(p) > 7]
 
+    paragraphs = paragraphs or [""]
+
     return _batch_probabilities(paragraphs, model, tokenizer)
 
 

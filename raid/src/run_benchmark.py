@@ -10,7 +10,7 @@ from inference import load_model, run_inference
 from data import sample_data
 from aggregators import all_or_nothing, take_max, take_mean, take_min
 
-N_TEST = 100  # 5_000
+N_TEST = 10_000
 
 
 def add_predictions(
