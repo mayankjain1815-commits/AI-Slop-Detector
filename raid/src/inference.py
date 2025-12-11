@@ -27,7 +27,7 @@ def load_model() -> tuple[PeftModel, PreTrainedTokenizer]:
     return model, tokenizer
 
 
-def _batch_probabilities(paragraphs: list[str], model: PeftModel, tokenizer: PreTrainedTokenizer) -> list[float]:
+def _batch_probabilities(paragraphs: list[str], model: PeftModel, tokenizer: PreTrainedTokenizer) -> torch.Tensor:
     inputs = tokenizer(
         paragraphs, 
         return_tensors="pt", 
@@ -42,10 +42,10 @@ def _batch_probabilities(paragraphs: list[str], model: PeftModel, tokenizer: Pre
         outputs = model(**inputs)
         probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)
     
-    return probabilities[:, 1].tolist()
+    return probabilities[:, 1]
 
 
-def run_inference(text: str, aggregator: Callable[[list[float]], float], model: PeftModel, tokenizer: PreTrainedTokenizer) -> float:
+def run_inference(text: str, aggregator: Callable[[torch.Tensor], float], model: PeftModel, tokenizer: PreTrainedTokenizer) -> float:
     """Returns estimated probability that a text was produced by AI."""
     paragraphs = text.split('\n')
     paragraphs = [p.strip() for p in paragraphs if len(p) > 7]
