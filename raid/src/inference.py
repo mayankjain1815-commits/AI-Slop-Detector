@@ -45,14 +45,12 @@ def _batch_probabilities(paragraphs: list[str], model: PeftModel, tokenizer: Pre
     return probabilities[:, 1]
 
 
-def run_inference(text: str, aggregator: Callable[[torch.Tensor], float], model: PeftModel, tokenizer: PreTrainedTokenizer) -> float:
+def run_inference(text: str, model: PeftModel, tokenizer: PreTrainedTokenizer) -> torch.Tensor:
     """Returns estimated probability that a text was produced by AI."""
     paragraphs = text.split('\n')
     paragraphs = [p.strip() for p in paragraphs if len(p) > 7]
 
-    probabilities = _batch_probabilities(paragraphs, model, tokenizer)
-
-    return aggregator(probabilities)
+    return _batch_probabilities(paragraphs, model, tokenizer)
 
 
 if __name__ == '__main__':
@@ -61,6 +59,7 @@ if __name__ == '__main__':
     text2 = "Born in Bristol and raised in Glastonbury, Norris is the son of an English father and a Belgian mother. He began competing in karting at the age of eight and quickly rose through the ranks, ultimately winning the direct-drive Karting World Championship in 2014. From there, he moved into junior single-seater racing. Norris captured his first car-racing title in the 2015 MSA Formula Championship with Carlin. In 2016, he added victories in the Toyota Racing Series, Formula Renault Eurocup, and Formula Renault NEC, and earned the Autosport BRDC Award. He went on to win the FIA Formula 3 European Championship in 2017 and finished second to George Russell in the 2018 FIA Formula 2 Championship, again driving for Carlin."
 
     model, tokenizer = load_model()
-    result = _batch_probabilities([text1, text2], model, tokenizer)
+    # result = _batch_probabilities([text1, text2], model, tokenizer)
+    result = run_inference(text1 + "\n" + text2, model, tokenizer)
 
     print(result)
