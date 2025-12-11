@@ -10,5 +10,8 @@ def all_or_nothing(probabilities: torch.Tensor) -> float:
 def take_max(probabilities: torch.Tensor) -> float:
     return probabilities.max().item()
 
+def take_min(probabilities: torch.Tensor) -> float:
+    return probabilities.min().item()
+
 def take_mean(probabilities: torch.Tensor) -> float:
     return probabilities.mean().item()
