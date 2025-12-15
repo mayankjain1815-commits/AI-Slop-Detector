@@ -4,6 +4,10 @@ from sklearn.metrics import roc_curve
 
 import matplotlib.pyplot as plt
 
+DOMAINS = ['reviews', 'books', 'wiki', 'reddit', 'news', 'abstracts', 'poetry', 'recipes']
+MODEL_FAMILIES = ["llama", "gpt", "cohere",  "mistral", "mpt"]
+MODEL_NAMES = ["Llama", "GPT", "Cohere",  "Mistral", "MPT"]
+
 
 def load_data(path: str) -> pd.DataFrame:
     df = pd.read_csv(path)
@@ -40,7 +44,7 @@ def get_results_by_domain(df: pd.DataFrame, agg="predictions_take_max") -> dict[
     return results
 
 
-def plot_tpr_bars(
+def plot_domain_tpr_bars(
     domain_results: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]],
     fig_path: str,
 ) -> None:
@@ -77,17 +81,21 @@ def plot_tpr_bars(
     fig.savefig(fig_path, dpi=300, bbox_inches='tight')
 
 
-def plot_roc(
-    domain_results: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]],
+def plot_subresult_roc(
+    subresults: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]],
+    keys: list[str],
     fig_path: str,
+    key_names: list[str] | None = None,
 ) -> None:
-    domains = ['reviews', 'books', 'wiki', 'reddit', 'news', 'abstracts', 'poetry', 'recipes']
-
     fig, ax = plt.subplots(figsize=(5, 4))
 
-    for idx, domain in enumerate(domains):
-        fpr, tpr, _ = domain_results[domain]
-        ax.plot(100 * fpr, 100 * tpr, label=domain.capitalize(), alpha=(1.0 if idx < 4 else 0.5))
+    for idx, key in enumerate(keys):
+        fpr, tpr, _ = subresults[key]
+
+        label = key_names[idx] if key_names else key.capitalize()
+        alpha = 1.0 if idx < 4 or len(keys) <= 5 else 0.5
+
+        ax.plot(100 * fpr, 100 * tpr, label=label, alpha=alpha)
 
     ax.plot([0, 100], [0, 100], 'k--')
 
@@ -100,15 +108,40 @@ def plot_roc(
     
     fig.tight_layout()
     fig.savefig(fig_path, dpi=300, bbox_inches='tight')
-    
+
+
+def get_results_by_model_families(df: pd.DataFrame, agg="predictions_take_max") -> dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    results = {}
+
+    for family in MODEL_FAMILIES:
+        df_filter = df[df["model"].str.contains(f"{family}|human")]
+
+        y_true = get_y_true(df_filter["model"])
+        y_score = df_filter[agg]
+
+        results[family] = roc_curve(y_true, y_score)
+
+    return results
+
 
 def main():
     df = load_data("./analysis/predictions_10000.csv")
 
+    # Results by model
+    model_results = get_results_by_model_families(df)
+    plot_subresult_roc(model_results, MODEL_FAMILIES, './analysis/roc-model.pdf', MODEL_NAMES)
+
+    for domain in ["wiki", "reviews", "books"]:
+        df_filter = df[df["domain"] == domain]
+        filter_model_results = get_results_by_model_families(df_filter)
+        plot_subresult_roc(filter_model_results, MODEL_FAMILIES, f'./analysis/roc-model-{domain}.pdf', MODEL_NAMES)
+
+
+    # Results by domain
     domain_results = get_results_by_domain(df)
     
-    plot_tpr_bars(domain_results, './analysis/tpr_bars.pdf')
-    plot_roc(domain_results, './analysis/roc.pdf')
+    plot_domain_tpr_bars(domain_results, './analysis/tpr_bars.pdf')
+    plot_subresult_roc(domain_results, DOMAINS, './analysis/roc-domain.pdf')
 
 
 if __name__ == '__main__':
