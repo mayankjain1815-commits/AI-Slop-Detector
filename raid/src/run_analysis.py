@@ -1,8 +1,7 @@
-import pandas as pd
-import numpy as np
-from sklearn.metrics import roc_curve
-
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.metrics import roc_curve
 
 DOMAINS = ['reviews', 'books', 'wiki', 'reddit', 'news', 'abstracts', 'poetry', 'recipes']
 MODEL_FAMILIES = ["llama", "gpt", "cohere",  "mistral", "mpt"]
@@ -30,7 +29,10 @@ def get_tpr_at_fpr(fpr: np.ndarray, tpr: np.ndarray, target_fpr: float) -> float
     return float(tpr[idx[-1]])
 
 
-def get_results_by_domain(df: pd.DataFrame, agg="predictions_take_max") -> dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]:
+def get_results_by_domain(
+    df: pd.DataFrame,
+    agg="predictions_take_max"
+) -> dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]:
     domains = set(df["domain"])
     results = {}
 
@@ -110,7 +112,10 @@ def plot_subresult_roc(
     fig.savefig(fig_path, dpi=300, bbox_inches='tight')
 
 
-def get_results_by_model_families(df: pd.DataFrame, agg="predictions_take_max") -> dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]:
+def get_results_by_model_families(
+    df: pd.DataFrame,
+    agg="predictions_take_max"
+) -> dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]:
     results = {}
 
     for family in MODEL_FAMILIES:
@@ -135,7 +140,6 @@ def main():
         df_filter = df[df["domain"] == domain]
         filter_model_results = get_results_by_model_families(df_filter)
         plot_subresult_roc(filter_model_results, MODEL_FAMILIES, f'./analysis/roc-model-{domain}.pdf', MODEL_NAMES)
-
 
     # Results by domain
     domain_results = get_results_by_domain(df)
