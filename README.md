@@ -1,5 +1,5 @@
 # AI Slop Detector
-An end-to-end implementation of an AI writing detector
+An end-to-end implementation of an AI writing detector  
 
 ## Data
 To train our classifier, we needed many examples of human-written text and AI-generated text.
