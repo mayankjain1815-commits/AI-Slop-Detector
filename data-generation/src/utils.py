@@ -49,7 +49,7 @@ def prepare_batch_file(
         for line in f:
             n_lines += 1
 
-    lines_per_split = n_lines // split_file_count
+    lines_per_split = max(1, n_lines // split_file_count)
 
     # Write to output files
     used_outputs = set()
@@ -84,7 +84,7 @@ def prepare_batch_file(
                 path_split = output_path_base.split(".")
                 output_path = (
                     ".".join(path_split[:-1])
-                    + f"_{idx // lines_per_split}."
+                    + f"_{min(idx // lines_per_split, split_file_count - 1)}."
                     + path_split[-1]
                 )
             used_outputs.add(output_path)
