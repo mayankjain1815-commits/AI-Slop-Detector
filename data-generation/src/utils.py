@@ -51,8 +51,10 @@ def prepare_batch_file(
 
     lines_per_split = max(1, n_lines // split_file_count)
 
-    # Write to output files
+    # Write to output files. Start each output at the beginning of this run so
+    # a repeated invocation cannot duplicate requests in an existing file.
     used_outputs = set()
+    started_outputs = set()
     with open(input_path, "r", encoding="utf-8") as fin:
         for idx, line in enumerate(fin):
             if max_lines and idx + 1 > max_lines:
@@ -88,7 +90,9 @@ def prepare_batch_file(
                     + path_split[-1]
                 )
             used_outputs.add(output_path)
-            with open(output_path, "a", encoding="utf-8") as fout:
+            mode = "a" if output_path in started_outputs else "w"
+            started_outputs.add(output_path)
+            with open(output_path, mode, encoding="utf-8") as fout:
                 fout.write(json.dumps(request, ensure_ascii=False))
                 fout.write("\n")
 
